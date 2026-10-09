@@ -1,0 +1,482 @@
+{
+  "users": [
+    {
+      "id": "admin",
+      "name": "Administrator",
+      "phone": "admin",
+      "password": "$2b$10$CEAbZOL69YGSQJtRsT4we.pNeFo2mOEnupA7KSjZ1TCAOYj/ql2NW",
+      "role": "admin",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff",
+      "details": {}
+    },
+    {
+      "id": "12234",
+      "name": "Santhosh",
+      "phone": "8903366719",
+      "department": "Railway",
+      "password": "$2b$10$8auMUUjXKCbv0GtqHLRQaupKrR2yOWfazM./.xygZkOp2zpn.b1wy",
+      "role": "student",
+      "status": "active",
+      "firstLoginPasswordChange": false,
+      "avatar": "https://ui-avatars.com/api/?name=Santhosh&background=random",
+      "details": {
+        "studentId": "12234",
+        "fullName": "Santhosh",
+        "phone": "8903366719",
+        "email": "student@example.com",
+        "department": "Railway",
+        "batch": "2026-A",
+        "dob": "",
+        "firstLoginPasswordChange": false,
+        "createdAt": "2026-10-05T16:37:46.307Z",
+        "passwordChangedAt": "2026-10-05T16:39:14.108Z"
+      },
+      "passwordChangedAt": "2026-10-05T16:39:14.108Z"
+    }
+  ],
+  "exams": [
+    {
+      "id": 1775374021135,
+      "title": "Sample",
+      "duration": 60,
+      "department": "Generic",
+      "category": "Mock Test",
+      "questions": [
+        {
+          "text": "1st Ques",
+          "options": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "correctAnswer": 2,
+          "type": "MCQ",
+          "image": "data:image/jpeg;base64,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",
+          "subject": "General",
+          "id": 1775374013459
+        }
+      ],
+      "status": "Active",
+      "max_attempts": 3,
+      "max_security_violations": 3,
+      "description": "General practice test and competency evaluation.",
+      "createdAt": "2026-04-05T07:27:01.135Z"
+    }
+  ],
+  "questions": [],
+  "results": [
+    {
+      "id": 1791351320710,
+      "attemptId": "att_1791351296167_0ql6",
+      "examId": 1775374021135,
+      "examTitle": "Sample",
+      "userId": "12234",
+      "studentName": "Santhosh",
+      "score": 0,
+      "percentage": 0,
+      "totalQuestions": 1,
+      "attemptedQuestions": 1,
+      "correctAnswers": 0,
+      "incorrectAnswers": 1,
+      "unansweredQuestions": 0,
+      "submissionType": "manual",
+      "violationsCount": 0,
+      "submittedAt": "2026-10-07T05:35:20.710Z",
+      "date": "2026-10-07T05:35:20.710Z"
+    }
+  ],
+  "attendance": [
+    {
+      "id": "2026-10-07",
+      "records": {
+        "12234": "Present"
+      }
+    }
+  ],
+  "schedules": [],
+  "requests": [],
+  "announcements": [
+    {
+      "id": 1775811763169,
+      "sender": "Administrator",
+      "target": "students",
+      "targetId": null,
+      "message": "Saturday onward holiday in KSR\n",
+      "timestamp": "2026-04-10T09:02:43.169Z",
+      "createdAt": "2026-04-10T09:02:43.169Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "sess_1791025040673",
+      "userId": "admin",
+      "userRole": "admin",
+      "userName": "Administrator",
+      "token": "spoko_tok_xrcl1rflcw8musa2dy9",
+      "deviceId": "DEV-ZTNWKDY-MUSA2DY9",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "ip": "127.0.0.1",
+      "createdAt": "2026-10-03T10:57:20.676Z",
+      "lastActiveAt": "2026-10-03T10:57:20.677Z",
+      "status": "active"
+    }
+  ],
+  "security_logs": [
+    {
+      "userId": "admin",
+      "eventType": "LOGIN_SUCCESS",
+      "status": "ALLOWED",
+      "details": "User successfully authenticated with role: admin",
+      "deviceId": "DEV-ZTNWKDY-MUSA2DY9",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-03T10:57:21.805Z",
+      "id": 1
+    },
+    {
+      "userId": "admin",
+      "eventType": "GEOFENCE_BRANCH_DELETED",
+      "status": "SUCCESS",
+      "details": "Admin deleted campus branch Spoko Academy - Tech Park Branch",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-03T10:58:07.163Z",
+      "id": 2
+    },
+    {
+      "userId": "admin",
+      "eventType": "LOGIN_SUCCESS",
+      "status": "ALLOWED",
+      "details": "User successfully authenticated as ADMIN",
+      "deviceId": "DEV-I7ABYKA-MUVH1OYE",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:36:04.733Z",
+      "id": 3
+    },
+    {
+      "userId": "admin",
+      "eventType": "LOGOUT",
+      "status": "SUCCESS",
+      "details": "User logged out securely",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:38:13.573Z",
+      "id": 4
+    },
+    {
+      "userId": "12234",
+      "eventType": "LOGIN_SUCCESS",
+      "status": "ALLOWED",
+      "details": "User successfully authenticated as STUDENT",
+      "deviceId": "DEV-I7ABYKA-MUVH1OYE",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:38:30.596Z",
+      "id": 5
+    },
+    {
+      "userId": "12234",
+      "eventType": "ATTENDANCE_PUNCH_REJECTED",
+      "status": "REJECTED",
+      "details": "Attendance rejected out of bounds at Spoko Academy - Main Campus: 12161m away (Allowed: 500m)",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:39:40.501Z",
+      "id": 6
+    },
+    {
+      "userId": "12234",
+      "eventType": "LOGOUT",
+      "status": "SUCCESS",
+      "details": "User logged out securely",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:40:42.167Z",
+      "id": 7
+    },
+    {
+      "userId": "admin",
+      "eventType": "LOGIN_SUCCESS",
+      "status": "ALLOWED",
+      "details": "User successfully authenticated as ADMIN",
+      "deviceId": "DEV-I7ABYKA-MUVH1OYE",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:40:52.050Z",
+      "id": 8
+    },
+    {
+      "userId": "admin",
+      "eventType": "GEOFENCE_SETTINGS_UPDATED",
+      "status": "SUCCESS",
+      "details": "Admin updated campus Spoko Academy - Main Campus (branch-main) to 9.4436753, 77.7972931 with radius 100m",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:43:22.899Z",
+      "id": 9
+    },
+    {
+      "userId": "admin",
+      "eventType": "GEOFENCE_SETTINGS_UPDATED",
+      "status": "SUCCESS",
+      "details": "Admin updated campus Spoko Academy - Small Safire (branch-city) to 11.3505, 77.725 with radius 350m",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:46:32.060Z",
+      "id": 10
+    },
+    {
+      "userId": "admin",
+      "eventType": "LOGOUT",
+      "status": "SUCCESS",
+      "details": "User logged out securely",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:46:40.125Z",
+      "id": 11
+    },
+    {
+      "userId": "12234",
+      "eventType": "LOGIN_SUCCESS",
+      "status": "ALLOWED",
+      "details": "User successfully authenticated as STUDENT",
+      "deviceId": "DEV-I7ABYKA-MUVH1OYE",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:47:00.378Z",
+      "id": 12
+    },
+    {
+      "userId": "12234",
+      "eventType": "LOGOUT",
+      "status": "SUCCESS",
+      "details": "User logged out securely",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-05T16:47:53.123Z",
+      "id": 13
+    },
+    {
+      "userId": "12234",
+      "eventType": "LOGIN_SUCCESS",
+      "status": "ALLOWED",
+      "details": "User successfully authenticated as STUDENT",
+      "deviceId": "DEV-I7ABYKA-MUVH1OYE",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-06T17:12:33.887Z",
+      "id": 14
+    },
+    {
+      "id": 1791351296167,
+      "userId": "12234",
+      "assessmentId": 1775374021135,
+      "attemptId": "att_1791351296167_0ql6",
+      "eventType": "ASSESSMENT_STARTED",
+      "status": "IN_PROGRESS",
+      "details": "Started assessment: \"Sample\" in secure proctor mode",
+      "timestamp": "2026-10-07T05:34:56.167Z"
+    },
+    {
+      "id": 1791351320711,
+      "userId": "12234",
+      "assessmentId": 1775374021135,
+      "attemptId": "att_1791351296167_0ql6",
+      "eventType": "ASSESSMENT_SUBMITTED",
+      "status": "SUCCESS",
+      "details": "Assessment submitted (manual). Server-computed score: 0% (0/1 correct)",
+      "timestamp": "2026-10-07T05:35:20.710Z"
+    },
+    {
+      "userId": "12234",
+      "eventType": "LOGOUT",
+      "status": "SUCCESS",
+      "details": "User logged out securely",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-07T05:35:40.263Z",
+      "id": 1791351320712
+    },
+    {
+      "userId": "admin",
+      "eventType": "LOGIN_SUCCESS",
+      "status": "ALLOWED",
+      "details": "User successfully authenticated as ADMIN",
+      "deviceId": "DEV-I7ABYKA-MUVH1OYE",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-07T05:35:47.627Z",
+      "id": 1791351320713
+    },
+    {
+      "userId": "admin",
+      "eventType": "LOGOUT",
+      "status": "SUCCESS",
+      "details": "User logged out securely",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "timestamp": "2026-10-07T09:14:32.937Z",
+      "id": 1791351320714
+    }
+  ],
+  "assessment_attempts": [
+    {
+      "id": "att_1791351296167_0ql6",
+      "userId": "12234",
+      "userName": "Santhosh",
+      "examId": 1775374021135,
+      "examTitle": "Sample",
+      "totalQuestions": 1,
+      "started_at": "2026-10-07T05:34:56.167Z",
+      "expected_end_at": "2026-10-07T06:34:56.167Z",
+      "status": "completed",
+      "violationsCount": 0,
+      "max_security_violations": 3,
+      "answers": {
+        "1775374013459": 0
+      },
+      "lastSavedAt": "2026-10-07T05:35:09.541Z",
+      "submitted_at": "2026-10-07T05:35:20.710Z",
+      "score": 0
+    }
+  ],
+  "attendance_records": [
+    {
+      "userId": "12234",
+      "userName": "Santhosh",
+      "branchId": "branch-main",
+      "branchName": "Spoko Academy - Main Campus",
+      "date": "2026-10-05",
+      "time": "22:09:40",
+      "latitude": 11.359831971275849,
+      "longitude": 77.82708167486047,
+      "distanceMeters": 12161,
+      "allowedRadiusMeters": 500,
+      "status": "Rejected",
+      "verificationResult": "OUT_OF_BOUNDS",
+      "deviceInfo": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "createdAt": "2026-10-05T16:39:40.454Z",
+      "id": 1
+    },
+    {
+      "userId": "12234",
+      "userName": "Santhosh",
+      "branchId": "branch-main",
+      "branchName": "Spoko Academy - Main Campus",
+      "date": "2026-10-05",
+      "time": "22:17:09",
+      "latitude": 11.359831971275849,
+      "longitude": 77.82708167486047,
+      "distanceMeters": 213092,
+      "allowedRadiusMeters": 100,
+      "status": "Rejected",
+      "verificationResult": "OUT_OF_BOUNDS",
+      "deviceInfo": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+      "createdAt": "2026-10-05T16:47:09.821Z",
+      "id": 2
+    }
+  ],
+  "location_settings": [
+    {
+      "id": "branch-main",
+      "orgName": "Spoko Academy - Main Campus",
+      "branchCode": "MAIN",
+      "latitude": 9.4436753,
+      "longitude": 77.7972931,
+      "allowedRadiusMeters": 100,
+      "address": "No 67, Vignesh Nagar, Arumugam Rd., Kaliappa Nagar, Sivakasi, Tamil Nadu 626123",
+      "isDefault": true,
+      "updatedAt": "2026-10-05T16:43:22.833Z"
+    },
+    {
+      "id": "branch-city",
+      "orgName": "Spoko Academy - Small Safire",
+      "branchCode": "CITY",
+      "latitude": 11.3505,
+      "longitude": 77.725,
+      "allowedRadiusMeters": 350,
+      "address": "Town Hall Road, Commercial Hub",
+      "isDefault": false,
+      "updatedAt": "2026-10-05T16:46:32.020Z"
+    }
+  ],
+  "departments": [
+    {
+      "id": "dept-railway",
+      "name": "Railway",
+      "code": "RLY",
+      "description": "Railway examination preparation",
+      "active": true,
+      "createdAt": "2026-10-05T15:23:03.772Z"
+    },
+    {
+      "id": "dept-ssc",
+      "name": "SSC",
+      "code": "SSC",
+      "description": "SSC examination preparation",
+      "active": true,
+      "createdAt": "2026-10-05T15:23:03.776Z"
+    },
+    {
+      "id": "dept-gd",
+      "name": "GD",
+      "code": "GD",
+      "description": "GD examination preparation",
+      "active": true,
+      "createdAt": "2026-10-05T15:23:03.776Z"
+    },
+    {
+      "id": "dept-4",
+      "name": "TNPSC",
+      "code": "DEPT4",
+      "description": "Replace with academy's actual fourth department",
+      "active": true,
+      "createdAt": "2026-10-05T15:23:03.776Z"
+    },
+    {
+      "id": "dept-5",
+      "name": "TNUSRB",
+      "code": "DEPT5",
+      "description": "Replace with academy's actual fifth department",
+      "active": true,
+      "createdAt": "2026-10-05T15:23:03.776Z"
+    }
+  ],
+  "leave_requests": [],
+  "leave_balances": [],
+  "audit_logs": [
+    {
+      "id": 1791218266879,
+      "timestamp": "2026-10-05T16:37:46.338Z",
+      "eventType": "STUDENT_CREATED",
+      "performedBy": "Administrator",
+      "userId": "12234",
+      "studentName": "Santhosh",
+      "details": "Admin created student Santhosh (12234). Temporary password hashed, first-login change enforced."
+    },
+    {
+      "id": 1791218354564,
+      "timestamp": "2026-10-05T16:39:14.137Z",
+      "eventType": "FIRST_LOGIN_PASSWORD_CHANGE",
+      "userId": "12234",
+      "userName": "Santhosh",
+      "role": "student",
+      "details": "Student completed mandatory initial password change on first login."
+    },
+    {
+      "id": 1791351410999,
+      "timestamp": "2026-10-07T05:36:50.492Z",
+      "eventType": "DEPARTMENT_UPDATED",
+      "performedBy": "Administrator",
+      "details": "Updated department \"Department 4\" to \"TNPSC\""
+    },
+    {
+      "id": 1791351421557,
+      "timestamp": "2026-10-07T05:37:00.769Z",
+      "eventType": "DEPARTMENT_UPDATED",
+      "performedBy": "Administrator",
+      "details": "Updated department \"Department 4\" to \"TNPSC\""
+    },
+    {
+      "id": 1791351432252,
+      "timestamp": "2026-10-07T05:37:12.026Z",
+      "eventType": "DEPARTMENT_UPDATED",
+      "performedBy": "Administrator",
+      "details": "Updated department \"Department 5\" to \"TNUSRB\""
+    },
+    {
+      "id": 1791351493243,
+      "timestamp": "2026-10-07T05:38:12.374Z",
+      "eventType": "ATTENDANCE_CORRECTION",
+      "performedBy": "Administrator",
+      "details": "Admin updated attendance records for date 2026-10-07. Total students marked: 1."
+    }
+  ],
+  "question_import_batches": []
+}
