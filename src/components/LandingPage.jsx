@@ -118,7 +118,10 @@ const LandingPage = () => {
                     width: 100%;
                     background: #ffffff;
                     border-bottom: 1px solid #e2e8f0;
-                    padding: 0.85rem 1.5rem;
+                    padding-top: max(0.85rem, env(safe-area-inset-top, 0px));
+                    padding-bottom: 0.85rem;
+                    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+                    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
                     position: sticky;
                     top: 0;
                     z-index: 50;
@@ -439,6 +442,25 @@ const LandingPage = () => {
                 }
 
                 @media (max-width: 640px) {
+                    .landing-header {
+                        padding-top: max(12px, calc(6px + env(safe-area-inset-top, 0px)));
+                        padding-bottom: 12px;
+                        padding-left: max(12px, env(safe-area-inset-left, 0px));
+                        padding-right: max(12px, env(safe-area-inset-right, 0px));
+                    }
+                    .header-container {
+                        gap: 0.5rem;
+                    }
+                    .header-title {
+                        font-size: 0.95rem;
+                    }
+                    .header-badge {
+                        font-size: 0.65rem;
+                    }
+                    .btn-header-signin {
+                        padding: 0.45rem 0.85rem;
+                        font-size: 0.82rem;
+                    }
                     .landing-hero-card {
                         padding: 2rem 1.25rem;
                     }

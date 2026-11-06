@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import { Shield, AlertTriangle, Maximize2, Clock, CheckCircle2, ChevronLeft, ChevronRight, Check, XCircle, RotateCcw, Lock } from 'lucide-react';
+import { Shield, AlertTriangle, AlertCircle, Maximize2, Clock, CheckCircle2, ChevronLeft, ChevronRight, Check, XCircle, RotateCcw, Lock } from 'lucide-react';
 
 const ExamTaker = () => {
     const { user } = useAuth();

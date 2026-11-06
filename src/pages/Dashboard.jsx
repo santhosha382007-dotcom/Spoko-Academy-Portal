@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
     Users, CheckCircle, Award, Calendar, Trash2, ClipboardList, Send, Bell, 
     UserCheck, Shield, Smartphone, PlusCircle, ArrowRight, BookOpen, TrendingUp,
-    Building2, Activity, Clock
+    Building2, Activity, Clock, BarChart2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';

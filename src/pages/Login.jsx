@@ -255,8 +255,8 @@ const Login = () => {
 
         .login-top-bar {
           position: absolute;
-          top: 1.5rem;
-          left: 1.5rem;
+          top: max(1.5rem, calc(0.75rem + env(safe-area-inset-top, 0px)));
+          left: max(1.5rem, calc(0.75rem + env(safe-area-inset-left, 0px)));
         }
 
         .back-link {
