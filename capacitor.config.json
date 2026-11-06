@@ -1,0 +1,9 @@
+{
+  "appId": "com.spoko.portal",
+  "appName": "Spoko Academy Portal",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

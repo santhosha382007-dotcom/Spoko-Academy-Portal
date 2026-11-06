@@ -1,0 +1,21 @@
+{
+  "short_name": "Spoko",
+  "name": "Spoko Academy Portal",
+  "icons": [
+    {
+      "src": "/src/assets/logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/src/assets/logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#f8fafc",
+  "theme_color": "#6366f1",
+  "display": "standalone",
+  "orientation": "portrait"
+}
