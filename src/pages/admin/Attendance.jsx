@@ -106,7 +106,6 @@ const Attendance = () => {
         setIsSaving(true);
         try {
             await api.saveAttendance(date, attendanceData);
-            // Audit Log per Section 7: Administrative attendance corrections must be audited
             await api.createAuditLog({
                 eventType: 'ATTENDANCE_CORRECTION',
                 performedBy: user?.name || 'Administrator',
@@ -280,85 +279,75 @@ const Attendance = () => {
     if (loading) return <div className="p-4">Loading Attendance Data...</div>;
 
     return (
-        <div className="fade-in">
-            <header className="page-header" style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <Link to="/" className="btn-icon" style={{ background: 'white', border: '1px solid var(--color-border)' }}>
-                        <ArrowLeft size={20} />
+        <div className="attendance-page-root fade-in">
+            {/* Header section with responsive layout */}
+            <header className="attendance-page-header">
+                <div className="attendance-header-title-wrap">
+                    <Link to="/" className="btn-icon attendance-back-btn">
+                        <ArrowLeft size={18} />
                     </Link>
                     <div>
-                        <h1 style={{ margin: 0 }}>Attendance Management</h1>
-                        <p className="text-muted" style={{ margin: 0 }}>Unitedsoft Attendance & Location Verification System</p>
+                        <h1 className="attendance-main-title">Attendance Management</h1>
+                        <p className="attendance-sub-title">Spoko Academy Attendance & Location Verification System</p>
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div className="attendance-header-date-wrap">
                     {activeTab === 'sheet' && (
-                        <div className="input-with-icon" style={{ width: 'auto' }}>
+                        <div className="input-with-icon attendance-date-box">
                             <Calendar size={18} className="input-icon" />
                             <input
                                 type="date"
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
-                                style={{ paddingLeft: '2.5rem' }}
+                                className="attendance-date-input"
                             />
                         </div>
                     )}
                 </div>
             </header>
 
-            {/* Navigation Tabs */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+            {/* Navigation Tabs - Horizontally scrollable on mobile */}
+            <div className="attendance-tabs-container">
                 <button
+                    type="button"
                     onClick={() => setActiveTab('sheet')}
-                    className="btn"
-                    style={{
-                        background: activeTab === 'sheet' ? 'var(--color-primary)' : 'transparent',
-                        color: activeTab === 'sheet' ? 'white' : '#64748b',
-                        fontWeight: 700, borderRadius: '8px'
-                    }}
+                    className={`attendance-tab-btn ${activeTab === 'sheet' ? 'active' : ''}`}
                 >
-                    <Calendar size={16} style={{ marginRight: '6px' }} />
-                    Daily Attendance Sheet
+                    <Calendar size={16} />
+                    <span>Daily Attendance Sheet</span>
                 </button>
 
                 <button
+                    type="button"
                     onClick={() => setActiveTab('geofence')}
-                    className="btn"
-                    style={{
-                        background: activeTab === 'geofence' ? 'var(--color-primary)' : 'transparent',
-                        color: activeTab === 'geofence' ? 'white' : '#64748b',
-                        fontWeight: 700, borderRadius: '8px'
-                    }}
+                    className={`attendance-tab-btn ${activeTab === 'geofence' ? 'active' : ''}`}
                 >
-                    <MapPin size={16} style={{ marginRight: '6px' }} />
-                    Campus Geo-Fencing Settings ({branchList.length})
+                    <MapPin size={16} />
+                    <span>Campus Geo-Fencing ({branchList.length})</span>
                 </button>
 
                 <button
+                    type="button"
                     onClick={() => setActiveTab('logs')}
-                    className="btn"
-                    style={{
-                        background: activeTab === 'logs' ? 'var(--color-primary)' : 'transparent',
-                        color: activeTab === 'logs' ? 'white' : '#64748b',
-                        fontWeight: 700, borderRadius: '8px'
-                    }}
+                    className={`attendance-tab-btn ${activeTab === 'logs' ? 'active' : ''}`}
                 >
-                    <ShieldCheck size={16} style={{ marginRight: '6px' }} />
-                    Live Geo-Punches Audit ({geoLogs.length})
+                    <ShieldCheck size={16} />
+                    <span>Live Geo-Punches Audit ({geoLogs.length})</span>
                 </button>
             </div>
 
             {/* TAB 1: DAILY ATTENDANCE SHEET */}
             {activeTab === 'sheet' && (
-                <div className="card glass-panel">
-                    <div className="toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '1rem', flex: 1 }}>
-                            <div className="input-with-icon" style={{ flex: 1, maxWidth: '300px' }}>
+                <div className="card glass-panel attendance-content-card">
+                    {/* Search & Filters Toolbar */}
+                    <div className="attendance-toolbar-box">
+                        <div className="attendance-filters-row">
+                            <div className="input-with-icon attendance-search-field">
                                 <Search size={18} className="input-icon" />
                                 <input
                                     type="text"
-                                    placeholder="Search student..."
+                                    placeholder="Search student or phone..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -367,89 +356,132 @@ const Attendance = () => {
                             <select
                                 value={filterDepartment}
                                 onChange={(e) => setFilterDepartment(e.target.value)}
-                                className="select-input"
-                                style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                className="select-input attendance-dept-select"
                             >
                                 <option value="All">All Departments</option>
                                 {departmentList.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                             </select>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Quick Mark:</span>
-                            <button onClick={() => markAll('Present')} className="btn btn-outline btn-sm" style={{ color: '#166534', borderColor: '#86efac' }}>All P</button>
-                            <button onClick={() => markAll('Absent')} className="btn btn-outline btn-sm" style={{ color: '#991b1b', borderColor: '#fca5a5' }}>All A</button>
-                            <button onClick={() => markAll('Leave')} className="btn btn-outline btn-sm" style={{ color: '#92400e', borderColor: '#fde68a' }}>All L</button>
-                            <button onClick={handleSave} disabled={isSaving} className="btn btn-primary btn-sm" style={{ marginLeft: '1rem' }}>
+                        <div className="attendance-actions-row">
+                            <div className="quick-mark-group">
+                                <span className="quick-mark-label">Quick:</span>
+                                <button type="button" onClick={() => markAll('Present')} className="btn-qk qk-p">All P</button>
+                                <button type="button" onClick={() => markAll('Absent')} className="btn-qk qk-a">All A</button>
+                                <button type="button" onClick={() => markAll('Leave')} className="btn-qk qk-l">All L</button>
+                            </div>
+                            <button type="button" onClick={handleSave} disabled={isSaving} className="btn btn-primary btn-save-sheet">
                                 {isSaving ? 'Saving...' : 'Save Sheet'}
                             </button>
                         </div>
                     </div>
 
-                    <div className="table-responsive">
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '2px solid #eee' }}>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Student Name</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Phone / User ID</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Department</th>
-                                    <th style={{ textAlign: 'center', padding: '1rem' }}>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredStudents.length === 0 ? (
+                    {/* Desktop View Table (Screens > 640px) */}
+                    <div className="attendance-desktop-view">
+                        <div className="table-responsive">
+                            <table className="attendance-table">
+                                <thead>
                                     <tr>
-                                        <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                                            No students found.
-                                        </td>
+                                        <th style={{ textAlign: 'left' }}>Student Name</th>
+                                        <th style={{ textAlign: 'left' }}>Phone / User ID</th>
+                                        <th style={{ textAlign: 'left' }}>Department</th>
+                                        <th style={{ textAlign: 'center' }}>Attendance Status</th>
                                     </tr>
-                                ) : filteredStudents.map(student => (
-                                    <tr key={student.id} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '1rem', fontWeight: 600 }}>{student.name}</td>
-                                        <td style={{ padding: '1rem', color: '#64748b' }}>{student.phone}</td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>
-                                                {student.details?.department || 'General'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                            <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
-                                                {['Present', 'Absent', 'Leave'].map(st => (
-                                                    <button
-                                                        key={st}
-                                                        onClick={() => handleAttendanceChange(student.id, st)}
-                                                        style={{
-                                                            padding: '0.4rem 0.8rem',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #e2e8f0',
-                                                            fontWeight: 700,
-                                                            fontSize: '0.8rem',
-                                                            cursor: 'pointer',
-                                                            background: attendanceData[student.id] === st
-                                                                ? (st === 'Present' ? '#10b981' : st === 'Absent' ? '#ef4444' : '#f59e0b')
-                                                                : 'white',
-                                                            color: attendanceData[student.id] === st ? 'white' : '#64748b'
-                                                        }}
-                                                    >
-                                                        {st[0]}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredStudents.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" className="empty-table-cell">
+                                                No students found matching current filters.
+                                            </td>
+                                        </tr>
+                                    ) : filteredStudents.map(student => (
+                                        <tr key={student.id}>
+                                            <td className="cell-name">{student.name}</td>
+                                            <td className="cell-phone">{student.phone}</td>
+                                            <td>
+                                                <span className="badge badge-dept">
+                                                    {student.details?.department || student.department || 'General'}
+                                                </span>
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <div className="table-punch-btn-group">
+                                                    {['Present', 'Absent', 'Leave'].map(st => (
+                                                        <button
+                                                            key={st}
+                                                            type="button"
+                                                            onClick={() => handleAttendanceChange(student.id, st)}
+                                                            className={`table-punch-btn ${attendanceData[student.id] === st ? `active-${st.toLowerCase()}` : ''}`}
+                                                        >
+                                                            {st === 'Present' ? 'P' : st === 'Absent' ? 'A' : 'L'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Mobile View Cards (Screens <= 640px) */}
+                    <div className="attendance-mobile-cards-view">
+                        {filteredStudents.length === 0 ? (
+                            <div className="mobile-empty-state">
+                                No students found.
+                            </div>
+                        ) : filteredStudents.map(student => {
+                            const current = attendanceData[student.id];
+                            return (
+                                <div key={student.id} className="mobile-student-card">
+                                    <div className="mobile-student-header">
+                                        <div className="mobile-student-meta">
+                                            <div className="mobile-student-name">{student.name}</div>
+                                            <div className="mobile-student-phone">{student.phone}</div>
+                                        </div>
+                                        <span className="badge badge-dept">
+                                            {student.details?.department || student.department || 'General'}
+                                        </span>
+                                    </div>
+                                    <div className="mobile-student-punch-grid">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAttendanceChange(student.id, 'Present')}
+                                            className={`mobile-punch-choice btn-p ${current === 'Present' ? 'selected' : ''}`}
+                                        >
+                                            <Check size={16} />
+                                            <span>Present</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAttendanceChange(student.id, 'Absent')}
+                                            className={`mobile-punch-choice btn-a ${current === 'Absent' ? 'selected' : ''}`}
+                                        >
+                                            <X size={16} />
+                                            <span>Absent</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAttendanceChange(student.id, 'Leave')}
+                                            className={`mobile-punch-choice btn-l ${current === 'Leave' ? 'selected' : ''}`}
+                                        >
+                                            <span>Leave</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
 
             {/* TAB 2: MULTI-CAMPUS GEO-FENCING SETTINGS */}
             {activeTab === 'geofence' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                <div className="geofence-layout-container">
                     {/* Branch List Sidebar */}
-                    <div className="card glass-panel" style={{ padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <div className="card glass-panel geofence-branch-sidebar">
+                        <div className="geofence-sidebar-header">
                             <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Campus Branches</h3>
                             <button
                                 type="button"
@@ -461,33 +493,23 @@ const Attendance = () => {
                             </button>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div className="geofence-branch-list">
                             {branchList.map(branch => {
                                 const isSelected = (geoSettings.id === branch.id) || (selectedBranchId === branch.id);
                                 return (
                                     <div
                                         key={branch.id}
                                         onClick={() => handleBranchSelect(branch)}
-                                        style={{
-                                            padding: '1rem',
-                                            borderRadius: '10px',
-                                            border: `2px solid ${isSelected ? 'var(--color-primary)' : '#e2e8f0'}`,
-                                            background: isSelected ? 'rgba(79, 70, 229, 0.05)' : 'white',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center'
-                                        }}
+                                        className={`branch-list-item ${isSelected ? 'selected' : ''}`}
                                     >
-                                        <div>
-                                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: isSelected ? 'var(--color-primary)' : '#1e293b' }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div className="branch-item-title">
                                                 {branch.orgName}
                                             </div>
-                                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>
+                                            <div className="branch-item-radius">
                                                 Radius: {branch.allowedRadiusMeters}m {branch.branchCode ? `• Code: ${branch.branchCode}` : ''}
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                            <div className="branch-item-coords">
                                                 {branch.latitude?.toFixed(4)}, {branch.longitude?.toFixed(4)}
                                             </div>
                                         </div>
@@ -499,8 +521,7 @@ const Attendance = () => {
                                                     e.stopPropagation();
                                                     handleDeleteBranch(branch.id);
                                                 }}
-                                                className="btn-icon-sm"
-                                                style={{ color: '#ef4444', background: '#fee2e2', borderRadius: '6px', padding: '0.35rem', border: 'none', cursor: 'pointer' }}
+                                                className="btn-delete-branch"
                                                 title="Delete branch"
                                             >
                                                 <Trash2 size={14} />
@@ -513,11 +534,11 @@ const Attendance = () => {
                     </div>
 
                     {/* Branch Editor Panel */}
-                    <div className="card glass-panel" style={{ padding: '2rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                            <MapPin size={28} color="var(--color-primary)" />
+                    <div className="card glass-panel geofence-editor-panel">
+                        <div className="geofence-editor-header">
+                            <MapPin size={28} color="var(--color-primary)" className="editor-pin-icon" />
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '1.3rem' }}>Edit: {geoSettings.orgName || 'Campus Branch'}</h2>
+                                <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Edit: {geoSettings.orgName || 'Campus Branch'}</h2>
                                 <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
                                     Define official GPS coordinates and allowed radius. Students outside this radius will be rejected during punch-in.
                                 </p>
@@ -525,68 +546,63 @@ const Attendance = () => {
                         </div>
 
                         {geoMsg && (
-                            <div style={{
-                                padding: '0.85rem 1rem', borderRadius: '10px', marginBottom: '1.5rem',
-                                background: geoMsg.includes('success') ? '#ecfdf5' : '#fef2f2',
-                                color: geoMsg.includes('success') ? '#065f46' : '#991b1b',
-                                border: `1px solid ${geoMsg.includes('success') ? '#a7f3d0' : '#fecaca'}`
-                            }}>
+                            <div className={`geo-alert-msg ${geoMsg.includes('success') ? 'alert-success' : 'alert-danger'}`}>
                                 {geoMsg}
                             </div>
                         )}
 
                         <form onSubmit={handleSaveGeoSettings}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                            <div className="geofence-form-row">
                                 <div className="form-group">
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Campus / Branch Name</label>
+                                    <label>Campus / Branch Name</label>
                                     <input
                                         type="text"
                                         value={geoSettings.orgName || ''}
                                         onChange={(e) => setGeoSettings({ ...geoSettings, orgName: e.target.value })}
                                         required
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                        className="form-control"
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Branch Code / Tag</label>
+                                    <label>Branch Code / Tag</label>
                                     <input
                                         type="text"
                                         value={geoSettings.branchCode || ''}
                                         onChange={(e) => setGeoSettings({ ...geoSettings, branchCode: e.target.value })}
                                         placeholder="e.g. MAIN, CITY"
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                        className="form-control"
                                     />
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                            <div className="geofence-form-row">
                                 <div className="form-group">
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Official Latitude</label>
+                                    <label>Official Latitude</label>
                                     <input
                                         type="number"
                                         step="0.000001"
                                         value={geoSettings.latitude !== undefined ? geoSettings.latitude : ''}
                                         onChange={(e) => setGeoSettings({ ...geoSettings, latitude: e.target.value })}
                                         required
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                        className="form-control"
                                     />
                                 </div>
 
                                 <div className="form-group">
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Official Longitude</label>
+                                    <label>Official Longitude</label>
                                     <input
                                         type="number"
                                         step="0.000001"
                                         value={geoSettings.longitude !== undefined ? geoSettings.longitude : ''}
                                         onChange={(e) => setGeoSettings({ ...geoSettings, longitude: e.target.value })}
                                         required
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                        className="form-control"
                                     />
                                 </div>
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                                <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Allowed Attendance Radius (in meters)</label>
+                                <label>Allowed Attendance Radius (in meters)</label>
                                 <input
                                     type="number"
                                     min="10"
@@ -594,39 +610,39 @@ const Attendance = () => {
                                     value={geoSettings.allowedRadiusMeters || 500}
                                     onChange={(e) => setGeoSettings({ ...geoSettings, allowedRadiusMeters: e.target.value })}
                                     required
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                    className="form-control"
                                 />
-                                <small style={{ color: '#64748b' }}>Students within this radius from the campus GPS will be accepted (Default: 500m).</small>
+                                <small style={{ color: '#64748b', display: 'block', marginTop: '0.3rem' }}>
+                                    Students within this radius from the campus GPS will be accepted (Default: 500m).
+                                </small>
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Campus Address / Landmark (Optional)</label>
+                                <label>Physical Address (Optional)</label>
                                 <input
                                     type="text"
                                     value={geoSettings.address || ''}
                                     onChange={(e) => setGeoSettings({ ...geoSettings, address: e.target.value })}
-                                    placeholder="e.g. 12/4 Academy Road, Salem Highway"
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                    placeholder="e.g. Campus Road, Chennai"
+                                    className="form-control"
                                 />
                             </div>
 
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <div className="geofence-form-actions">
                                 <button
                                     type="button"
                                     onClick={handleDetectCurrentLocation}
-                                    className="btn btn-outline"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                    className="btn btn-outline btn-sm"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                                 >
-                                    <Navigation size={16} />
-                                    Set to My Current GPS
+                                    <Navigation size={14} /> Detect Current Device GPS
                                 </button>
-
                                 <button
                                     type="submit"
                                     disabled={isSavingGeo}
-                                    className="btn btn-primary"
+                                    className="btn btn-primary btn-sm"
                                 >
-                                    {isSavingGeo ? 'Saving...' : 'Save Campus Branch'}
+                                    {isSavingGeo ? 'Saving...' : 'Update Campus Branch'}
                                 </button>
                             </div>
                         </form>
@@ -634,50 +650,36 @@ const Attendance = () => {
 
                     {/* Add Branch Modal */}
                     {showAddBranchModal && (
-                        <div style={{
-                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            zIndex: 9999, padding: '1rem'
-                        }}>
-                            <div className="card glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '2rem', background: 'white' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                    <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Add New Campus Branch</h3>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddBranchModal(false)}
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-
+                        <div className="modal-backdrop">
+                            <div className="modal-card-box">
+                                <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem' }}>Add New Campus Branch</h3>
                                 <form onSubmit={handleCreateBranch}>
                                     <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.3rem' }}>Campus / Branch Name *</label>
+                                        <label>Campus / Branch Name *</label>
                                         <input
                                             type="text"
                                             value={newBranchData.orgName}
                                             onChange={(e) => setNewBranchData({ ...newBranchData, orgName: e.target.value })}
-                                            placeholder="e.g. Spoko Metro Campus"
+                                            placeholder="e.g. Spoko Academy - North Branch"
                                             required
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                            className="form-control"
                                         />
                                     </div>
 
                                     <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.3rem' }}>Branch Code / Tag</label>
+                                        <label>Branch Code (Optional)</label>
                                         <input
                                             type="text"
                                             value={newBranchData.branchCode}
                                             onChange={(e) => setNewBranchData({ ...newBranchData, branchCode: e.target.value })}
                                             placeholder="e.g. METRO"
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                            className="form-control"
                                         />
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div className="geofence-form-row" style={{ marginBottom: '1rem' }}>
                                         <div className="form-group">
-                                            <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.3rem' }}>Latitude *</label>
+                                            <label>Latitude *</label>
                                             <input
                                                 type="number"
                                                 step="0.000001"
@@ -685,11 +687,11 @@ const Attendance = () => {
                                                 onChange={(e) => setNewBranchData({ ...newBranchData, latitude: e.target.value })}
                                                 placeholder="e.g. 11.3410"
                                                 required
-                                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                className="form-control"
                                             />
                                         </div>
                                         <div className="form-group">
-                                            <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.3rem' }}>Longitude *</label>
+                                            <label>Longitude *</label>
                                             <input
                                                 type="number"
                                                 step="0.000001"
@@ -697,13 +699,13 @@ const Attendance = () => {
                                                 onChange={(e) => setNewBranchData({ ...newBranchData, longitude: e.target.value })}
                                                 placeholder="e.g. 77.7172"
                                                 required
-                                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                className="form-control"
                                             />
                                         </div>
                                     </div>
 
                                     <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.3rem' }}>Allowed Radius (meters) *</label>
+                                        <label>Allowed Radius (meters) *</label>
                                         <input
                                             type="number"
                                             min="10"
@@ -711,22 +713,22 @@ const Attendance = () => {
                                             value={newBranchData.allowedRadiusMeters}
                                             onChange={(e) => setNewBranchData({ ...newBranchData, allowedRadiusMeters: e.target.value })}
                                             required
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                            className="form-control"
                                         />
                                     </div>
 
                                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.3rem' }}>Address (Optional)</label>
+                                        <label>Address (Optional)</label>
                                         <input
                                             type="text"
                                             value={newBranchData.address}
                                             onChange={(e) => setNewBranchData({ ...newBranchData, address: e.target.value })}
                                             placeholder="Physical address"
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                            className="form-control"
                                         />
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                                         <button
                                             type="button"
                                             onClick={handleDetectNewBranchLocation}
@@ -759,42 +761,38 @@ const Attendance = () => {
 
             {/* TAB 3: LIVE GEO-PUNCHES AUDIT */}
             {activeTab === 'logs' && (
-                <div className="card glass-panel">
+                <div className="card glass-panel attendance-content-card">
                     <h3 style={{ margin: '0 0 1rem', fontSize: '1.2rem' }}>Geo-Attendance Punch Audit Log</h3>
                     <div className="table-responsive">
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table className="attendance-table">
                             <thead>
-                                <tr style={{ borderBottom: '2px solid #eee' }}>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Student</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Date & Time</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Coordinates</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Distance from Campus</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem' }}>Verification</th>
+                                <tr>
+                                    <th style={{ textAlign: 'left' }}>Student</th>
+                                    <th style={{ textAlign: 'left' }}>Date & Time</th>
+                                    <th style={{ textAlign: 'left' }}>Coordinates</th>
+                                    <th style={{ textAlign: 'left' }}>Distance from Campus</th>
+                                    <th style={{ textAlign: 'left' }}>Verification</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {geoLogs.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                                        <td colSpan="5" className="empty-table-cell">
                                             No GPS punch logs recorded yet. When students mark attendance via GPS, their location and Haversine distance will appear here.
                                         </td>
                                     </tr>
                                 ) : geoLogs.map(log => (
-                                    <tr key={log.id || log.createdAt} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '1rem', fontWeight: 600 }}>{log.userName || log.userId}</td>
-                                        <td style={{ padding: '1rem', color: '#64748b' }}>{log.date} {log.time}</td>
-                                        <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                                    <tr key={log.id || log.createdAt}>
+                                        <td className="cell-name">{log.userName || log.userId}</td>
+                                        <td className="cell-phone">{log.date} {log.time}</td>
+                                        <td style={{ fontSize: '0.85rem' }}>
                                             {log.latitude?.toFixed(4)}, {log.longitude?.toFixed(4)}
                                         </td>
-                                        <td style={{ padding: '1rem' }}>
+                                        <td>
                                             <strong>{log.distanceMeters !== undefined ? `${log.distanceMeters} m` : 'N/A'}</strong>
                                         </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <span style={{
-                                                padding: '0.3rem 0.75rem', borderRadius: '15px', fontSize: '0.8rem', fontWeight: 700,
-                                                background: log.verificationResult === 'VALID' ? '#dcfce7' : '#fee2e2',
-                                                color: log.verificationResult === 'VALID' ? '#166534' : '#991b1b'
-                                            }}>
+                                        <td>
+                                            <span className={`badge-pill ${log.verificationResult === 'VALID' ? 'badge-valid' : 'badge-invalid'}`}>
                                                 {log.verificationResult || log.status}
                                             </span>
                                         </td>
@@ -805,6 +803,535 @@ const Attendance = () => {
                     </div>
                 </div>
             )}
+
+            <style>{`
+                .attendance-page-root {
+                    width: 100%;
+                    max-width: 100%;
+                    overflow-x: hidden;
+                }
+
+                .attendance-page-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1rem;
+                    margin-bottom: 1.25rem;
+                    flex-wrap: wrap;
+                }
+
+                .attendance-header-title-wrap {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.85rem;
+                }
+
+                .attendance-back-btn {
+                    background: white;
+                    border: 1px solid var(--color-border);
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 10px;
+                }
+
+                .attendance-main-title {
+                    margin: 0;
+                    font-size: 1.45rem;
+                    font-weight: 800;
+                    color: var(--slate-900);
+                }
+
+                .attendance-sub-title {
+                    margin: 0;
+                    font-size: 0.82rem;
+                    color: var(--slate-500);
+                }
+
+                .attendance-header-date-wrap {
+                    display: flex;
+                    align-items: center;
+                }
+
+                .attendance-date-box {
+                    width: auto;
+                    min-width: 170px;
+                }
+
+                .attendance-date-input {
+                    padding-left: 2.5rem !important;
+                    font-size: 0.9rem;
+                    border-radius: 10px;
+                }
+
+                /* Horizontally Scrollable Tabs Navigation */
+                .attendance-tabs-container {
+                    display: flex;
+                    gap: 0.6rem;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                    padding-bottom: 0.4rem;
+                    margin-bottom: 1.25rem;
+                    border-bottom: 2px solid #e2e8f0;
+                }
+
+                .attendance-tabs-container::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .attendance-tab-btn {
+                    white-space: nowrap;
+                    flex-shrink: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.45rem;
+                    padding: 0.6rem 1rem;
+                    border-radius: 10px;
+                    font-size: 0.88rem;
+                    font-weight: 700;
+                    border: none;
+                    cursor: pointer;
+                    background: transparent;
+                    color: #64748b;
+                    transition: all 0.2s ease;
+                }
+
+                .attendance-tab-btn.active {
+                    background: var(--color-primary);
+                    color: #ffffff;
+                    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+                }
+
+                /* Toolbar */
+                .attendance-toolbar-box {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1.25rem;
+                    flex-wrap: wrap;
+                    gap: 0.85rem;
+                }
+
+                .attendance-filters-row {
+                    display: flex;
+                    gap: 0.75rem;
+                    flex: 1;
+                    min-width: 260px;
+                }
+
+                .attendance-search-field {
+                    flex: 1;
+                    min-width: 140px;
+                }
+
+                .attendance-dept-select {
+                    padding: 0.55rem 0.85rem;
+                    border-radius: 10px;
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    font-size: 0.88rem;
+                    min-width: 140px;
+                }
+
+                .attendance-actions-row {
+                    display: flex;
+                    gap: 0.75rem;
+                    align-items: center;
+                    flex-wrap: wrap;
+                }
+
+                .quick-mark-group {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                }
+
+                .quick-mark-label {
+                    font-size: 0.82rem;
+                    color: #64748b;
+                    font-weight: 600;
+                }
+
+                .btn-qk {
+                    padding: 0.35rem 0.65rem;
+                    border-radius: 8px;
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    background: transparent;
+                    border: 1px solid;
+                }
+
+                .qk-p { color: #166534; border-color: #86efac; background: #f0fdf4; }
+                .qk-a { color: #991b1b; border-color: #fca5a5; background: #fef2f2; }
+                .qk-l { color: #92400e; border-color: #fde68a; background: #fffbeb; }
+
+                .btn-save-sheet {
+                    padding: 0.55rem 1.1rem !important;
+                    font-size: 0.85rem !important;
+                    border-radius: 10px !important;
+                    font-weight: 700 !important;
+                }
+
+                /* Table styles */
+                .attendance-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+
+                .attendance-table th {
+                    padding: 0.9rem 1rem;
+                    border-bottom: 2px solid #e2e8f0;
+                    font-size: 0.82rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                    color: #64748b;
+                }
+
+                .attendance-table td {
+                    padding: 0.9rem 1rem;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+
+                .cell-name {
+                    font-weight: 600;
+                    color: #1e293b;
+                }
+
+                .cell-phone {
+                    color: #64748b;
+                    font-size: 0.88rem;
+                }
+
+                .badge-dept {
+                    background: #f1f5f9;
+                    color: #475569;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    padding: 0.25rem 0.6rem;
+                    border-radius: 6px;
+                }
+
+                .table-punch-btn-group {
+                    display: inline-flex;
+                    gap: 0.35rem;
+                }
+
+                .table-punch-btn {
+                    padding: 0.4rem 0.75rem;
+                    border-radius: 8px;
+                    border: 1px solid #e2e8f0;
+                    font-weight: 700;
+                    font-size: 0.82rem;
+                    cursor: pointer;
+                    background: white;
+                    color: #64748b;
+                    transition: all 0.15s ease;
+                }
+
+                .table-punch-btn.active-present { background: #10b981; color: white; border-color: #10b981; }
+                .table-punch-btn.active-absent { background: #ef4444; color: white; border-color: #ef4444; }
+                .table-punch-btn.active-leave { background: #f59e0b; color: white; border-color: #f59e0b; }
+
+                /* Mobile Card View (hidden on desktop) */
+                .attendance-mobile-cards-view {
+                    display: none;
+                }
+
+                .mobile-student-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 1rem;
+                    margin-bottom: 0.85rem;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+                }
+
+                .mobile-student-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 0.85rem;
+                }
+
+                .mobile-student-name {
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: #0f172a;
+                }
+
+                .mobile-student-phone {
+                    font-size: 0.82rem;
+                    color: #64748b;
+                    margin-top: 0.15rem;
+                }
+
+                .mobile-student-punch-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 0.5rem;
+                }
+
+                .mobile-punch-choice {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.3rem;
+                    padding: 0.65rem 0.5rem;
+                    border-radius: 10px;
+                    border: 1px solid #e2e8f0;
+                    background: #f8fafc;
+                    color: #64748b;
+                    font-size: 0.88rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+
+                .mobile-punch-choice.btn-p.selected {
+                    background: #10b981;
+                    color: #ffffff;
+                    border-color: #10b981;
+                    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
+                }
+
+                .mobile-punch-choice.btn-a.selected {
+                    background: #ef4444;
+                    color: #ffffff;
+                    border-color: #ef4444;
+                    box-shadow: 0 3px 8px rgba(239, 68, 68, 0.3);
+                }
+
+                .mobile-punch-choice.btn-l.selected {
+                    background: #f59e0b;
+                    color: #ffffff;
+                    border-color: #f59e0b;
+                    box-shadow: 0 3px 8px rgba(245, 158, 11, 0.3);
+                }
+
+                /* Geo-Fencing Styles */
+                .geofence-layout-container {
+                    display: grid;
+                    grid-template-columns: minmax(280px, 340px) 1fr;
+                    gap: 1.5rem;
+                    align-items: start;
+                }
+
+                .geofence-branch-sidebar {
+                    padding: 1.25rem;
+                }
+
+                .geofence-sidebar-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1.25rem;
+                }
+
+                .geofence-branch-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
+                .branch-list-item {
+                    padding: 0.9rem;
+                    border-radius: 10px;
+                    border: 2px solid #e2e8f0;
+                    background: #ffffff;
+                    cursor: pointer;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 0.5rem;
+                    transition: all 0.2s ease;
+                }
+
+                .branch-list-item.selected {
+                    border-color: var(--color-primary);
+                    background: rgba(79, 70, 229, 0.05);
+                }
+
+                .branch-item-title {
+                    font-weight: 700;
+                    font-size: 0.92rem;
+                    color: #1e293b;
+                }
+
+                .branch-item-radius {
+                    font-size: 0.8rem;
+                    color: #64748b;
+                    margin-top: 0.15rem;
+                }
+
+                .branch-item-coords {
+                    font-size: 0.75rem;
+                    color: #94a3b8;
+                }
+
+                .btn-delete-branch {
+                    color: #ef4444;
+                    background: #fee2e2;
+                    border-radius: 6px;
+                    padding: 0.35rem;
+                    border: none;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                }
+
+                .geofence-editor-panel {
+                    padding: 1.75rem;
+                }
+
+                .geofence-editor-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    margin-bottom: 1.5rem;
+                }
+
+                .editor-pin-icon {
+                    flex-shrink: 0;
+                }
+
+                .geo-alert-msg {
+                    padding: 0.85rem 1rem;
+                    border-radius: 10px;
+                    margin-bottom: 1.5rem;
+                    font-size: 0.88rem;
+                }
+
+                .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+                .alert-danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+                .geofence-form-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                    margin-bottom: 1.25rem;
+                }
+
+                .form-control {
+                    width: 100%;
+                    padding: 0.75rem;
+                    border-radius: 8px;
+                    border: 1px solid #cbd5e1;
+                    font-size: 0.9rem;
+                    box-sizing: border-box;
+                }
+
+                .geofence-form-actions {
+                    display: flex;
+                    gap: 0.75rem;
+                    justify-content: flex-end;
+                    flex-wrap: wrap;
+                }
+
+                .modal-backdrop {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    padding: 1rem;
+                }
+
+                .modal-card-box {
+                    background: white;
+                    padding: 1.75rem;
+                    border-radius: 16px;
+                    max-width: 500px;
+                    width: 100%;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                }
+
+                .badge-pill {
+                    padding: 0.3rem 0.75rem;
+                    border-radius: 15px;
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                }
+
+                .badge-valid { background: #dcfce7; color: #166534; }
+                .badge-invalid { background: #fee2e2; color: #991b1b; }
+
+                .empty-table-cell, .mobile-empty-state {
+                    text-align: center;
+                    padding: 2.5rem 1rem;
+                    color: #64748b;
+                    font-size: 0.9rem;
+                }
+
+                /* Responsive Breakpoints */
+                @media (max-width: 640px) {
+                    .attendance-desktop-view {
+                        display: none;
+                    }
+                    .attendance-mobile-cards-view {
+                        display: block;
+                    }
+                    .attendance-page-header {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 0.75rem;
+                    }
+                    .attendance-header-date-wrap {
+                        width: 100%;
+                    }
+                    .attendance-date-box {
+                        width: 100%;
+                    }
+                    .attendance-date-input {
+                        width: 100%;
+                    }
+                    .attendance-filters-row {
+                        flex-direction: column;
+                        min-width: 100%;
+                    }
+                    .attendance-search-field, .attendance-dept-select {
+                        width: 100%;
+                    }
+                    .attendance-actions-row {
+                        width: 100%;
+                        justify-content: space-between;
+                    }
+                    .quick-mark-group {
+                        flex: 1;
+                        justify-content: space-between;
+                    }
+                    .btn-save-sheet {
+                        width: 100%;
+                        margin-top: 0.4rem;
+                        padding: 0.75rem !important;
+                        font-size: 0.95rem !important;
+                    }
+                    .geofence-layout-container {
+                        grid-template-columns: 1fr;
+                    }
+                    .geofence-form-row {
+                        grid-template-columns: 1fr;
+                    }
+                    .geofence-editor-panel {
+                        padding: 1.25rem;
+                    }
+                    .geofence-form-actions {
+                        flex-direction: column;
+                    }
+                    .geofence-form-actions button {
+                        width: 100%;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

@@ -609,13 +609,14 @@ const Layout = ({ children }) => {
                 }
 
                 .app-topbar {
-                    height: var(--header-height);
+                    min-height: var(--header-height);
+                    height: auto;
                     background-color: #ffffff;
                     border-bottom: 1px solid var(--border-color);
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 0 2rem;
+                    padding: env(safe-area-inset-top, 0px) 2rem 0;
                     position: sticky;
                     top: 0;
                     z-index: 90;
@@ -834,7 +835,11 @@ const Layout = ({ children }) => {
                     }
 
                     .app-topbar {
-                        padding: 0 1rem;
+                        padding-top: max(8px, env(safe-area-inset-top, 0px));
+                        padding-bottom: 8px;
+                        padding-left: max(1rem, env(safe-area-inset-left, 0px));
+                        padding-right: max(1rem, env(safe-area-inset-right, 0px));
+                        min-height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
                     }
 
                     .app-sidebar {
@@ -850,7 +855,9 @@ const Layout = ({ children }) => {
                     }
 
                     .app-canvas-container {
-                        padding: 1.25rem 1rem calc(72px + env(safe-area-inset-bottom, 0px));
+                        padding: 1.25rem 1rem calc(80px + env(safe-area-inset-bottom, 0px));
+                        max-width: 100vw;
+                        overflow-x: hidden;
                     }
 
                     .mobile-bottom-bar {
@@ -859,7 +866,8 @@ const Layout = ({ children }) => {
                         bottom: 0;
                         left: 0;
                         right: 0;
-                        height: 64px;
+                        height: calc(64px + env(safe-area-inset-bottom, 0px));
+                        padding-bottom: env(safe-area-inset-bottom, 0px);
                         background-color: #ffffff;
                         border-top: 1px solid var(--border-color);
                         justify-content: space-around;
