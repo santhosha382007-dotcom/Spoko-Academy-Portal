@@ -185,7 +185,6 @@ const Login = () => {
 
           {/* Card Help Footer */}
           <div className="card-help-footer">
-            <p>Admin Login: <code>Spoko</code> / <code>Spoko@123</code></p>
             <p className="help-text">Need assistance? Contact Academic Administration.</p>
           </div>
         </div>

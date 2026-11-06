@@ -60,10 +60,7 @@ const Layout = ({ children }) => {
     const isWindows = isWindowsPlatform();
     const isMobile = isMobilePlatform();
 
-    const [showSimModal, setShowSimModal] = useState(() => {
-        if (!isStudent || !isMobile || isWindows) return false;
-        return localStorage.getItem(`spoko_sim_verified_${user?.id}`) !== 'true';
-    });
+    const [showSimModal, setShowSimModal] = useState(false);
 
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

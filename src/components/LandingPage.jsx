@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    ArrowRight, ShieldCheck, CheckCircle2, Award, 
-    BookOpen, Users, Compass, Laptop, Smartphone, Database, Lock
+    ArrowRight, ShieldCheck, 
+    BookOpen, Users, Laptop, Smartphone, Database
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 
@@ -57,30 +57,6 @@ const LandingPage = () => {
                         </div>
                         <h1 className="hero-title">Spoko Academy</h1>
                         <p className="hero-motto">“Today's Seed, Tomorrow's Tree”</p>
-                        <p className="hero-description">
-                            Unified institutional platform for real-time academic assessments, 
-                            geofenced attendance validation, batch curriculum management, and multi-factor student administration.
-                        </p>
-                    </div>
-
-                    {/* Feature Highlights Grid */}
-                    <div className="features-pill-grid">
-                        <div className="feature-pill">
-                            <CheckCircle2 size={16} className="pill-icon text-indigo" />
-                            <span>Cloud-Synced Real-Time Database</span>
-                        </div>
-                        <div className="feature-pill">
-                            <Lock size={16} className="pill-icon text-indigo" />
-                            <span>Biometric & SIM Verification</span>
-                        </div>
-                        <div className="feature-pill">
-                            <Compass size={16} className="pill-icon text-indigo" />
-                            <span>Geofenced Campus Attendance</span>
-                        </div>
-                        <div className="feature-pill">
-                            <Award size={16} className="pill-icon text-indigo" />
-                            <span>Continuous Assessment Registry</span>
-                        </div>
                     </div>
 
                     {/* Call To Action Primary Section */}

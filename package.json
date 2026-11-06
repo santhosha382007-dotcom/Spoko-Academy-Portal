@@ -11,7 +11,7 @@
     "build": "vite build",
     "cap:sync": "npx cap sync android",
     "build:mobile": "vite build && npx cap sync android",
-    "build:apk": "npm run build:mobile && cd android && gradlew.bat assembleDebug && cd ..",
+    "build:apk": "npm run build:mobile && cd android && gradlew.bat assembleDebug && cd .. && copy /Y android\\app\\build\\outputs\\apk\\debug\\app-debug.apk Spoko_Academy_Portal.apk",
     "electron": "electron .",
     "package:win": "electron-packager . \"Spoko Academy Portal\" --platform=win32 --arch=x64 --out=dist-electron --overwrite --ignore=\"(node_modules|src|android|backend|scripts|\\.git|dist-electron)\"",
     "build:win": "vite build && npm run package:win",
