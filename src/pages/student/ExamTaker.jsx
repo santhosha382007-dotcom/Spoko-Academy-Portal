@@ -509,8 +509,8 @@ const ExamTaker = () => {
     const answeredCount = Object.keys(answers).length;
 
     return (
-        <div className="secure-exam-view" style={{ minHeight: '100vh', background: '#f8fafc', padding: '1.5rem 2rem' }}>
-            {/* Screenshot/Print Media Protection Style */}
+        <div className="secure-exam-view">
+            {/* Screenshot/Print Media Protection & Responsive Exam Styles */}
             <style>{`
                 @media print {
                     body { display: none !important; }
@@ -518,6 +518,346 @@ const ExamTaker = () => {
                 .secure-exam-view {
                     user-select: none;
                     -webkit-user-select: none;
+                    width: 100%;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 1rem 0.85rem;
+                    box-sizing: border-box;
+                    padding-bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+                }
+
+                @media (min-width: 768px) {
+                    .secure-exam-view {
+                        padding: 1.5rem 1.5rem;
+                        padding-bottom: 3.5rem;
+                    }
+                }
+
+                /* Top Exam Status Bar */
+                .exam-status-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 0.85rem 1.25rem;
+                    margin-bottom: 1.25rem;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1rem;
+                    flex-wrap: wrap;
+                }
+
+                .exam-status-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    flex: 1;
+                    min-width: 200px;
+                }
+
+                .exam-mode-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.35rem;
+                    background: #e0e7ff;
+                    color: #4338ca;
+                    padding: 0.35rem 0.75rem;
+                    border-radius: 20px;
+                    font-size: 0.78rem;
+                    font-weight: 700;
+                    white-space: nowrap;
+                }
+
+                .exam-title-display {
+                    font-size: 0.88rem;
+                    color: #334155;
+                    font-weight: 600;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    max-width: 250px;
+                }
+
+                .exam-status-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.85rem;
+                    flex-wrap: wrap;
+                }
+
+                .exam-violation-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.35rem;
+                    font-size: 0.82rem;
+                    font-weight: 700;
+                    white-space: nowrap;
+                }
+
+                .exam-timer-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.45rem;
+                    font-size: 1.1rem;
+                    font-weight: 800;
+                    color: #ffffff;
+                    padding: 0.4rem 1rem;
+                    border-radius: 10px;
+                    white-space: nowrap;
+                    letter-spacing: 0.5px;
+                }
+
+                .btn-submit-action {
+                    padding: 0.55rem 1.25rem;
+                    font-weight: 700;
+                    font-size: 0.88rem;
+                    border-radius: 10px;
+                    white-space: nowrap;
+                }
+
+                /* Responsive Main Content Grid */
+                .exam-main-layout {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) 280px;
+                    gap: 1.5rem;
+                    align-items: start;
+                }
+
+                .exam-question-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 1.75rem;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+                    box-sizing: border-box;
+                    width: 100%;
+                }
+
+                .question-meta-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1.25rem;
+                }
+
+                .question-counter-tag {
+                    background: #f1f5f9;
+                    color: #1e293b;
+                    padding: 0.35rem 0.85rem;
+                    border-radius: 8px;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                }
+
+                .question-status-tag {
+                    font-size: 0.82rem;
+                    font-weight: 600;
+                }
+
+                .question-title-text {
+                    font-size: 1.18rem;
+                    line-height: 1.6;
+                    color: #0f172a;
+                    font-weight: 700;
+                    margin-bottom: 1.5rem;
+                    word-break: break-word;
+                }
+
+                /* MCQ Options List */
+                .exam-mcq-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.85rem;
+                    margin-bottom: 2rem;
+                    width: 100%;
+                }
+
+                .exam-option-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.95rem;
+                    padding: 1rem 1.25rem;
+                    border-radius: 14px;
+                    border: 2px solid #e2e8f0;
+                    background: #ffffff;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+
+                .exam-option-item:hover {
+                    border-color: #cbd5e1;
+                    background: #f8fafc;
+                }
+
+                .exam-option-item.selected {
+                    border-color: var(--color-primary);
+                    background: #f5f3ff;
+                }
+
+                .option-indicator-circle {
+                    width: 22px;
+                    height: 22px;
+                    min-width: 22px;
+                    border-radius: 50%;
+                    border: 2px solid #cbd5e1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #ffffff;
+                    flex-shrink: 0;
+                    transition: all 0.15s ease;
+                }
+
+                .exam-option-item.selected .option-indicator-circle {
+                    border-color: var(--color-primary);
+                    background: var(--color-primary);
+                }
+
+                .option-text-wrap {
+                    font-size: 0.98rem;
+                    color: #0f172a !important;
+                    -webkit-text-fill-color: #0f172a !important;
+                    line-height: 1.45;
+                    font-weight: 500;
+                    flex: 1;
+                    word-break: break-word;
+                }
+
+                .option-prefix-label {
+                    font-weight: 800;
+                    color: var(--color-primary);
+                    margin-right: 0.35rem;
+                }
+
+                /* Navigation row */
+                .exam-question-nav {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding-top: 1.5rem;
+                    border-top: 1px solid #f1f5f9;
+                    gap: 0.75rem;
+                }
+
+                .btn-exam-nav {
+                    min-height: 44px;
+                    padding: 0.65rem 1.35rem;
+                    font-weight: 700;
+                    font-size: 0.92rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                    border-radius: 10px;
+                }
+
+                /* Palette Sidebar */
+                .exam-palette-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+                    box-sizing: border-box;
+                    width: 100%;
+                }
+
+                .palette-header-title {
+                    margin: 0 0 1rem;
+                    font-size: 0.95rem;
+                    font-weight: 700;
+                    color: #0f172a;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .palette-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 0.5rem;
+                    margin-bottom: 1.25rem;
+                }
+
+                .palette-btn {
+                    padding: 0.65rem 0;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    font-size: 0.88rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 38px;
+                    transition: all 0.15s ease;
+                }
+
+                .palette-legend {
+                    font-size: 0.78rem;
+                    display: grid;
+                    gap: 0.45rem;
+                    color: #475569;
+                    border-top: 1px solid #f1f5f9;
+                    padding-top: 1rem;
+                }
+
+                /* Mobile Adaptations (<= 768px) */
+                @media (max-width: 768px) {
+                    .exam-status-card {
+                        flex-direction: column;
+                        align-items: stretch;
+                        padding: 0.85rem 1rem;
+                        gap: 0.75rem;
+                    }
+
+                    .exam-status-left {
+                        width: 100%;
+                        justify-content: space-between;
+                    }
+
+                    .exam-status-right {
+                        width: 100%;
+                        justify-content: space-between;
+                    }
+
+                    .exam-title-display {
+                        max-width: 180px;
+                        font-size: 0.82rem;
+                    }
+
+                    .exam-main-layout {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1.25rem;
+                    }
+
+                    .exam-question-card {
+                        padding: 1.25rem 1rem;
+                    }
+
+                    .question-title-text {
+                        font-size: 1.05rem;
+                        margin-bottom: 1.25rem;
+                    }
+
+                    .exam-option-item {
+                        padding: 0.85rem 1rem;
+                        gap: 0.75rem;
+                    }
+
+                    .option-text-wrap {
+                        font-size: 0.92rem;
+                    }
+
+                    .exam-palette-card {
+                        padding: 1.25rem 1rem;
+                    }
+
+                    .palette-grid {
+                        grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+                    }
                 }
             `}</style>
 
@@ -576,7 +916,7 @@ const ExamTaker = () => {
                         maxWidth: '460px', width: '90%', textAlign: 'center'
                     }}>
                         <CheckCircle2 size={44} color="var(--color-primary)" style={{ margin: '0 auto 1rem' }} />
-                        <h2 style={{ margin: '0 0 0.5rem' }}>Submit Assessment?</h2>
+                        <h2 style={{ margin: '0 0 0.5rem', color: '#0f172a' }}>Submit Assessment?</h2>
                         <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
                             You have answered <strong>{answeredCount}</strong> of <strong>{questions.length}</strong> questions.
                             Once confirmed, your answers will be finalized and evaluated.
@@ -593,76 +933,55 @@ const ExamTaker = () => {
                 </div>
             )}
 
-            {/* Top Bar: Section 18 UI Security Indicators */}
-            <div className="card glass-panel" style={{
-                position: 'sticky', top: '1rem', zIndex: 100,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '0.9rem 1.5rem', marginBottom: '1.5rem', borderRadius: '14px',
-                border: '1px solid #e2e8f0', background: 'rgba(255, 255, 255, 0.98)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '0.4rem',
-                        background: '#e0e7ff', color: '#4338ca', padding: '0.35rem 0.75rem',
-                        borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700
-                    }}>
-                        <Lock size={14} />
-                        <span>🔒 Secure Assessment Mode</span>
+            {/* Top Bar: Assessment Status & Timer */}
+            <div className="exam-status-card">
+                <div className="exam-status-left">
+                    <div className="exam-mode-badge">
+                        <Lock size={13} />
+                        <span>Secure Mode</span>
                     </div>
-                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                    <span className="exam-title-display" title={exam.title}>
                         {exam.title}
                     </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '0.4rem',
-                        fontSize: '0.85rem', fontWeight: 700,
-                        color: violations > 0 ? '#ef4444' : '#10b981'
-                    }}>
-                        <Shield size={16} />
-                        <span>Security Violations: {violations} / {maxViolations}</span>
+                <div className="exam-status-right">
+                    <div className="exam-violation-badge" style={{ color: violations > 0 ? '#ef4444' : '#10b981' }}>
+                        <Shield size={15} />
+                        <span>Violations: {violations}/{maxViolations}</span>
                     </div>
 
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        fontSize: '1.2rem', fontWeight: 800,
-                        background: timerColor, color: 'white',
-                        padding: '0.4rem 1.1rem', borderRadius: '10px'
-                    }}>
-                        <Clock size={18} />
-                        <span>Timer: {formatTime(timeLeft)}</span>
+                    <div className="exam-timer-chip" style={{ background: timerColor }}>
+                        <Clock size={16} />
+                        <span>{formatTime(timeLeft)}</span>
                     </div>
 
                     <button
                         onClick={() => setShowConfirmSubmit(true)}
-                        className="btn btn-primary btn-sm"
-                        style={{ padding: '0.5rem 1.25rem', fontWeight: 700 }}
+                        className="btn btn-primary btn-submit-action"
                     >
-                        Submit Assessment
+                        Submit
                     </button>
                 </div>
             </div>
 
             {/* Assessment Question View & Question Navigation */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: '1.5rem' }}>
+            <div className="exam-main-layout">
                 {currentQ && (
-                    <div className="card glass-panel" style={{ padding: '2rem', borderRadius: '16px', background: 'white' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <span style={{
-                                background: '#f1f5f9', color: '#334155',
-                                padding: '0.3rem 0.8rem', borderRadius: '8px',
-                                fontSize: '0.85rem', fontWeight: 700
-                            }}>
+                    <div className="exam-question-card">
+                        <div className="question-meta-row">
+                            <span className="question-counter-tag">
                                 Question {currentQuestionIndex + 1} of {questions.length}
                             </span>
-                            <span style={{ fontSize: '0.8rem', color: answers[currentQ.id] !== undefined ? '#166534' : '#64748b', fontWeight: 600 }}>
+                            <span
+                                className="question-status-tag"
+                                style={{ color: answers[currentQ.id] !== undefined ? '#166534' : '#64748b' }}
+                            >
                                 {answers[currentQ.id] !== undefined ? '● Answered' : '○ Not Answered'}
                             </span>
                         </div>
 
-                        <h3 style={{ fontSize: '1.2rem', lineHeight: '1.6', marginBottom: '1.5rem', color: '#1e293b' }}>
+                        <h3 className="question-title-text">
                             {currentQ.text}
                         </h3>
 
@@ -677,32 +996,21 @@ const ExamTaker = () => {
                         )}
 
                         {(!currentQ.type || currentQ.type === 'MCQ') ? (
-                            <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '2rem' }}>
+                            <div className="exam-mcq-list">
                                 {currentQ.options && currentQ.options.map((opt, i) => (
-                                    <label
+                                    <div
                                         key={i}
                                         onClick={() => handleAnswerChange(currentQ.id, i)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '1rem',
-                                            padding: '1rem 1.25rem', borderRadius: '12px',
-                                            border: `2px solid ${answers[currentQ.id] === i ? 'var(--color-primary)' : '#e2e8f0'}`,
-                                            background: answers[currentQ.id] === i ? '#f5f3ff' : 'white',
-                                            cursor: 'pointer', transition: 'all 0.15s'
-                                        }}
+                                        className={`exam-option-item ${answers[currentQ.id] === i ? 'selected' : ''}`}
                                     >
-                                        <div style={{
-                                            width: '22px', height: '22px', borderRadius: '50%',
-                                            border: `2px solid ${answers[currentQ.id] === i ? 'var(--color-primary)' : '#cbd5e1'}`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            background: answers[currentQ.id] === i ? 'var(--color-primary)' : 'transparent',
-                                            flexShrink: 0
-                                        }}>
+                                        <div className="option-indicator-circle">
                                             {answers[currentQ.id] === i && <Check size={14} color="white" />}
                                         </div>
-                                        <span style={{ fontSize: '0.95rem', color: '#1e293b' }}>
-                                            <strong>{String.fromCharCode(65 + i)}.</strong> {opt}
-                                        </span>
-                                    </label>
+                                        <div className="option-text-wrap">
+                                            <span className="option-prefix-label">{String.fromCharCode(65 + i)}.</span>
+                                            {opt}
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         ) : (
@@ -714,19 +1022,19 @@ const ExamTaker = () => {
                                     onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
                                     style={{
                                         width: '100%', padding: '1rem', borderRadius: '12px',
-                                        border: '2px solid #e2e8f0', fontFamily: 'inherit', fontSize: '0.95rem'
+                                        border: '2px solid #e2e8f0', fontFamily: 'inherit', fontSize: '0.95rem',
+                                        color: '#0f172a', backgroundColor: '#ffffff'
                                     }}
                                 />
                             </div>
                         )}
 
-                        {/* Navigation Buttons: Section 10 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
+                        {/* Navigation Buttons */}
+                        <div className="exam-question-nav">
                             <button
                                 onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                                 disabled={currentQuestionIndex === 0}
-                                className="btn btn-outline"
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                className="btn btn-outline btn-exam-nav"
                             >
                                 <ChevronLeft size={18} />
                                 Previous
@@ -735,8 +1043,7 @@ const ExamTaker = () => {
                             {currentQuestionIndex < questions.length - 1 ? (
                                 <button
                                     onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                                    className="btn btn-primary"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                    className="btn btn-primary btn-exam-nav"
                                 >
                                     Next
                                     <ChevronRight size={18} />
@@ -744,7 +1051,7 @@ const ExamTaker = () => {
                             ) : (
                                 <button
                                     onClick={() => setShowConfirmSubmit(true)}
-                                    className="btn btn-primary"
+                                    className="btn btn-primary btn-exam-nav"
                                     style={{ background: '#10b981' }}
                                 >
                                     Finish & Submit
@@ -755,9 +1062,15 @@ const ExamTaker = () => {
                 )}
 
                 {/* Question Palette Sidebar */}
-                <div className="card glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', height: 'fit-content', background: 'white' }}>
-                    <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: '#1e293b' }}>Question Palette</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                <div className="exam-palette-card">
+                    <div className="palette-header-title">
+                        <span>Question Palette</span>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                            {answeredCount}/{questions.length} Answered
+                        </span>
+                    </div>
+
+                    <div className="palette-grid">
                         {questions.map((q, idx) => {
                             const isAnswered = answers[q.id] !== undefined;
                             const isCurrent = idx === currentQuestionIndex;
@@ -767,7 +1080,7 @@ const ExamTaker = () => {
 
                             if (isCurrent) {
                                 bg = 'var(--color-primary)';
-                                color = 'white';
+                                color = '#ffffff';
                                 border = '2px solid var(--color-primary-dark)';
                             } else if (isAnswered) {
                                 bg = '#ecfdf5';
@@ -779,10 +1092,11 @@ const ExamTaker = () => {
                                 <button
                                     key={q.id || idx}
                                     onClick={() => setCurrentQuestionIndex(idx)}
+                                    className="palette-btn"
                                     style={{
-                                        padding: '0.6rem 0', borderRadius: '8px',
-                                        background: bg, color: color, border: border,
-                                        fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer'
+                                        background: bg,
+                                        color: color,
+                                        border: border
                                     }}
                                 >
                                     {idx + 1}
@@ -791,7 +1105,7 @@ const ExamTaker = () => {
                         })}
                     </div>
 
-                    <div style={{ fontSize: '0.75rem', display: 'grid', gap: '0.4rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
+                    <div className="palette-legend">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#ecfdf5', border: '1px solid #10b981' }}></span>
                             <span>Answered ({answeredCount})</span>

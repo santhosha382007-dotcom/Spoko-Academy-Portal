@@ -357,9 +357,14 @@ const Attendance = () => {
                                 value={filterDepartment}
                                 onChange={(e) => setFilterDepartment(e.target.value)}
                                 className="select-input attendance-dept-select"
+                                style={{ color: '#0f172a', backgroundColor: '#ffffff', WebkitTextFillColor: '#0f172a' }}
                             >
-                                <option value="All">All Departments</option>
-                                {departmentList.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                                <option value="All" style={{ color: '#0f172a', backgroundColor: '#ffffff', WebkitTextFillColor: '#0f172a' }}>All Departments</option>
+                                {departmentList.map(d => (
+                                    <option key={d.id} value={d.name} style={{ color: '#0f172a', backgroundColor: '#ffffff', WebkitTextFillColor: '#0f172a' }}>
+                                        {d.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
@@ -933,8 +938,15 @@ const Attendance = () => {
                     border-radius: 10px;
                     border: 1px solid #cbd5e1;
                     background: #ffffff;
+                    color: #0f172a !important;
+                    -webkit-text-fill-color: #0f172a !important;
                     font-size: 0.88rem;
                     min-width: 140px;
+                }
+                .attendance-dept-select option {
+                    color: #0f172a !important;
+                    background: #ffffff !important;
+                    -webkit-text-fill-color: #0f172a !important;
                 }
 
                 .attendance-actions-row {
