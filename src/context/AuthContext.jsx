@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
                 users = await api.getUsers();
             } catch (connErr) {
                 console.error("[AUTH] Database Connection Failure:", connErr);
-                alert(`Cloud Connection Issue!\n\nUnable to reach the Spoko Academy Cloud API:\n${connErr?.url || 'https://spoko-academy-portal.onrender.com'}\n\nPlease check your internet connection or wait a few moments if the server is waking up.`);
+                alert('Cloud Connection Issue!\n\nUnable to reach the Spoko Academy Cloud Service.\n\nPlease check your internet connection or wait a few moments if the server is waking up.');
                 throw connErr;
             }
 

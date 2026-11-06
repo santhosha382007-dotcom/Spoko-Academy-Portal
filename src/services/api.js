@@ -1,16 +1,8 @@
-const CLOUD_API_URL = 'https://spoko-academy-portal.onrender.com';
+const CLOUD_API_URL = 'https://spoko-academy-portal-2.onrender.com';
 const API_PORT = 3001;
 
-// Base API URL resolver: prioritizes env var, localStorage override, then production Cloud API
+// Production Cloud API endpoint (hidden internally)
 const getBaseUrl = () => {
-    if (import.meta.env.VITE_API_URL) {
-        return import.meta.env.VITE_API_URL;
-    }
-    const customUrl = localStorage.getItem('spoko_api_url');
-    if (customUrl) {
-        return customUrl.replace(/\/$/, '');
-    }
-    // Default to the live Render cloud backend for PC, Mobile APK, and Browser
     return CLOUD_API_URL;
 };
 

@@ -86,52 +86,10 @@ const ProfileSettings = () => {
                         <button className="btn btn-outline" style={{ marginTop: '1.5rem' }}>Update Password</button>
                     </div>
 
-                    <div className="card" style={{ marginTop: '1.5rem' }}>
-                        <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Shield size={20} color="#6366f1" /> Mobile & Network Connection
-                        </h3>
-                        <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                            Configure the portal server endpoint for Mobile APK and Cross-Device access over Wi-Fi.
-                        </p>
-                        <div className="input-group-premium">
-                            <label>Portal API Endpoint (Default: https://spoko-academy-portal.onrender.com)</label>
-                            <input 
-                                type="text" 
-                                defaultValue={localStorage.getItem('spoko_api_url') || 'https://spoko-academy-portal.onrender.com'}
-                                id="spoko_server_input"
-                                placeholder="e.g. https://spoko-academy-portal.onrender.com"
-                            />
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                            <button 
-                                className="btn btn-primary btn-sm"
-                                onClick={() => {
-                                    const val = document.getElementById('spoko_server_input')?.value?.trim();
-                                    if (val) {
-                                        localStorage.setItem('spoko_api_url', val);
-                                        alert(`API Server URL updated to: ${val}\nReloading portal...`);
-                                        window.location.reload();
-                                    }
-                                }}
-                            >
-                                Save & Connect
-                            </button>
-                            <button 
-                                className="btn btn-outline btn-sm"
-                                onClick={() => {
-                                    localStorage.removeItem('spoko_api_url');
-                                    alert('Reset to local default! Reloading...');
-                                    window.location.reload();
-                                }}
-                            >
-                                Reset to Default
-                            </button>
-                        </div>
                     </div>
-                </div>
             </div>
 
-            <style>{`
+<style>{`
                 .settings-grid { display: grid; grid-template-columns: 320px 1fr; gap: 2rem; align-items: start; }
                 
                 .avatar-upload-group { display: flex; flex-direction: column; align-items: center; padding-bottom: 2rem; border-bottom: 1px solid #f1f5f9; }
