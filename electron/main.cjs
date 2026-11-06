@@ -89,7 +89,6 @@ function startLocalServer(callback) {
 
 function createWindow(port) {
     const possibleIcons = [
-        path.join(__dirname, '..', 'dist', 'assets', 'logo-BvhLMLG3.png'),
         path.join(__dirname, '..', 'Spoko Logo.png'),
         path.join(__dirname, '..', 'src', 'assets', 'logo.png')
     ];
