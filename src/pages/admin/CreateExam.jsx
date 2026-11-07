@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, Plus, Trash2, X, Loader, Image as ImageIcon } from 'lucide-react';
 import { api } from '../../services/api';
@@ -25,7 +25,7 @@ const CreateExam = () => {
 
     const [departments, setDepartments] = useState([]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         api.getDepartments().then(setDepartments).catch(() => {});
     }, []);
 

@@ -30,12 +30,22 @@ const StudentReport = () => {
                 // Calculate attendance percentage
                 let presentCount = 0;
                 let totalDays = 0;
-                Object.values(allAttendance).forEach(records => {
-                    if (records && records[userId]) {
-                        totalDays++;
-                        if (records[userId] === 'present') presentCount++;
-                    }
-                });
+                if (allAttendance && typeof allAttendance === 'object') {
+                    const days = Array.isArray(allAttendance) ? allAttendance : Object.values(allAttendance);
+                    days.forEach(day => {
+                        if (day && typeof day === 'object') {
+                            const records = day.records || day;
+                            if (records && typeof records === 'object') {
+                                const statusVal = records[userId];
+                                if (statusVal) {
+                                    totalDays++;
+                                    const statusStr = String(statusVal?.status || statusVal).toLowerCase();
+                                    if (statusStr === 'present') presentCount++;
+                                }
+                            }
+                        }
+                    });
+                }
 
                 setAttendance({
                     present: presentCount,

@@ -36,14 +36,18 @@ const DepartmentStudents = () => {
             ]);
 
             // STRICT ISOLATION: Department staff only sees students in their own department
+            const deptClean = String(departmentName || '').toLowerCase().trim().replace(/s$/, '');
             const deptStudents = (allUsers || []).filter(u => {
                 if (u.role !== 'student') return false;
-                const studentDept = u.department || u.details?.department;
-                return studentDept && studentDept.toLowerCase() === departmentName.toLowerCase();
+                const studentDept = String(u.department || u.details?.department || '').toLowerCase().trim().replace(/s$/, '');
+                return studentDept === deptClean || 
+                       (deptClean === 'gd' && studentDept.includes('gd')) || 
+                       (deptClean.includes('gd') && studentDept === 'gd') ||
+                       (studentDept && studentDept === String(departmentName).toLowerCase().trim());
             });
 
             setStudents(deptStudents);
-            setAttendanceData(allAttendance || []);
+            setAttendanceData(allAttendance || {});
             setResultsData(allResults || []);
         } catch (err) {
             console.error("Error loading department students:", err);
@@ -68,17 +72,27 @@ const DepartmentStudents = () => {
         // Attendance stats
         let presentDays = 0;
         let totalMarkedDays = 0;
-        attendanceData.forEach(att => {
-            if (att.records && att.records[student.id]) {
-                totalMarkedDays++;
-                if (att.records[student.id].status === 'present') {
-                    presentDays++;
+        if (attendanceData && typeof attendanceData === 'object') {
+            const days = Array.isArray(attendanceData) ? attendanceData : Object.values(attendanceData);
+            days.forEach(day => {
+                if (day && typeof day === 'object') {
+                    const records = day.records || day;
+                    if (records && typeof records === 'object') {
+                        const statusVal = records[student.id];
+                        if (statusVal) {
+                            totalMarkedDays++;
+                            const statusStr = String(statusVal?.status || statusVal).toLowerCase();
+                            if (statusStr === 'present') {
+                                presentDays++;
+                            }
+                        }
+                    } else if (day.studentId === student.id || day.userId === student.id) {
+                        totalMarkedDays++;
+                        if (String(day.status).toLowerCase() === 'present') presentDays++;
+                    }
                 }
-            } else if (att.studentId === student.id || att.userId === student.id) {
-                totalMarkedDays++;
-                if (att.status === 'present') presentDays++;
-            }
-        });
+            });
+        }
 
         const attendanceRate = totalMarkedDays > 0 
             ? Math.round((presentDays / totalMarkedDays) * 100)

@@ -938,33 +938,41 @@ const StudentView = ({ exams, results, user, announcements, attendance = {} }) =
 
 const StaffView = ({ user, users = [], exams = [], results = [], departments = [], announcements = [], attendance = {} }) => {
     const myDept = user?.department || user?.details?.department || 'General';
-    const deptStudents = users.filter(u => {
+    const deptClean = String(myDept || '').toLowerCase().trim().replace(/s$/, '');
+    const deptStudents = (users || []).filter(u => {
         if (u.role !== 'student') return false;
-        const sDept = u.department || u.details?.department;
-        return sDept && sDept.toLowerCase() === myDept.toLowerCase();
+        const studentDept = String(u.department || u.details?.department || '').toLowerCase().trim().replace(/s$/, '');
+        return studentDept === deptClean || 
+               (deptClean === 'gd' && studentDept.includes('gd')) || 
+               (deptClean.includes('gd') && studentDept === 'gd') ||
+               (studentDept && studentDept === String(myDept).toLowerCase().trim());
     });
 
     const [deptQuestionsCount, setDeptQuestionsCount] = useState(0);
 
     useEffect(() => {
+        let isMounted = true;
         api.getQuestions().then(qs => {
-            const count = (qs || []).filter(q => 
-                (q.department && q.department.toLowerCase() === myDept.toLowerCase()) ||
-                (q.subject && q.subject.toLowerCase() === myDept.toLowerCase())
-            ).length;
+            if (!isMounted) return;
+            const count = (qs || []).filter(q => {
+                const qDept = String(q.department || '').toLowerCase().trim().replace(/s$/, '');
+                const qSub = String(q.subject || '').toLowerCase().trim().replace(/s$/, '');
+                return qDept === deptClean || qSub === deptClean || (deptClean && (qDept.includes(deptClean) || qSub.includes(deptClean)));
+            }).length;
             setDeptQuestionsCount(count);
         }).catch(() => {});
-    }, [myDept]);
+        return () => { isMounted = false; };
+    }, [myDept, deptClean]);
 
     // Results of department students
     const deptStudentIds = new Set(deptStudents.map(s => String(s.id)));
-    const deptResults = results.filter(r => deptStudentIds.has(String(r.userId)) || deptStudentIds.has(String(r.studentId)));
+    const deptResults = (results || []).filter(r => deptStudentIds.has(String(r.userId)) || deptStudentIds.has(String(r.studentId)));
 
     const deptAvgScore = deptResults.length > 0
-        ? Math.round(deptResults.reduce((acc, r) => acc + (Number(r.percentage) || (Number(r.score) / (Number(r.totalMarks) || 100)) * 100 || 0), 0) / deptResults.length)
+        ? Math.round(deptResults.reduce((acc, r) => acc + (Number(r.percentage) || (Number(r.score) / (Number(r.totalMarks) || 100)) * 100 || Number(r.score) || 0), 0) / deptResults.length)
         : 0;
 
-    const myAnnouncements = announcements.filter(a =>
+    const myAnnouncements = (announcements || []).filter(a =>
         a.target === 'all' ||
         a.target === 'staff' ||
         a.department === myDept

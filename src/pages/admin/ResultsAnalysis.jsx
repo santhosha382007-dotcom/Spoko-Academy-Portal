@@ -50,22 +50,25 @@ const ResultsAnalysis = () => {
             (r.studentName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.examTitle || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-        const exam = exams.find(e => e.id === r.examId);
-        const matchesDept = filterDept === 'All' || exam?.department === filterDept;
-        const matchesExam = filterExam === 'All' || r.examId.toString() === filterExam;
+        const exam = exams.find(e => String(e.id) === String(r.examId));
+        const examDept = String(exam?.department || r.department || '').toLowerCase().trim().replace(/s$/, '');
+        const targetDept = String(filterDept || '').toLowerCase().trim().replace(/s$/, '');
+        const matchesDept = filterDept === 'All' || examDept === targetDept || (targetDept && examDept.includes(targetDept));
+        const matchesExam = filterExam === 'All' || String(r.examId) === String(filterExam);
 
         return matchesSearch && matchesDept && matchesExam;
     });
 
     // Chart Data Preparation
-    const trendData = results.slice(0, 7).reverse().map(r => ({
-        date: new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        score: r.score
+    const dataForStats = isStaff ? filteredResults : results;
+    const trendData = dataForStats.slice(0, 7).reverse().map(r => ({
+        date: r.date || r.timestamp ? new Date(r.date || r.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recent',
+        score: Number(r.score) || 0
     }));
 
     const passRateData = [
-        { name: 'Pass', value: results.filter(r => r.score >= 50).length, color: '#10b981' },
-        { name: 'Fail', value: results.filter(r => r.score < 50).length, color: '#ef4444' }
+        { name: 'Pass', value: dataForStats.filter(r => (Number(r.score) || 0) >= 50).length, color: '#10b981' },
+        { name: 'Fail', value: dataForStats.filter(r => (Number(r.score) || 0) < 50).length, color: '#ef4444' }
     ];
 
     const departmentPerf = DEPARTMENTS.map(dept => {

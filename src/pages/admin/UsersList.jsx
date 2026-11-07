@@ -719,7 +719,8 @@ const UsersList = () => {
             String(u.phone || '').includes(searchTerm) ||
             String(u.details?.batch || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesDept = filterDept === 'All' || u.details?.department === filterDept;
+        const uDept = u.department || u.details?.department;
+        const matchesDept = filterDept === 'All' || uDept === filterDept;
         const matchesStatus = filterStatus === 'All' || (u.status || 'active').toLowerCase() === filterStatus.toLowerCase();
 
         return matchesSearch && matchesDept && matchesStatus;

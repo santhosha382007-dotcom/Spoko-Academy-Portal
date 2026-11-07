@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, FileUp, Upload, Check, Trash2, Plus, Edit2, 
@@ -28,7 +28,7 @@ const PDFImport = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [savedCount, setSavedCount] = useState(0);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (isStaff && staffDept) {
             setSelectedDepartment(staffDept);
         }

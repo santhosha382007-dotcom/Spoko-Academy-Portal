@@ -20,10 +20,12 @@ const DepartmentDetails = () => {
                 ]);
 
                 // Filter students for this department
-                const deptStudents = allUsers.filter(u =>
-                    u.role === 'student' &&
-                    (u.department === deptName || u.details?.department === deptName)
-                );
+                const cleanDeptName = decodeURIComponent(deptName || '').toLowerCase().trim().replace(/s$/, '');
+                const deptStudents = allUsers.filter(u => {
+                    if (u.role !== 'student') return false;
+                    const uDept = String(u.department || u.details?.department || '').toLowerCase().trim().replace(/s$/, '');
+                    return uDept === cleanDeptName || (cleanDeptName && (uDept.includes(cleanDeptName) || cleanDeptName.includes(uDept)));
+                });
 
                 // Process data for each student
                 const processedStudents = deptStudents.map(student => {
@@ -68,9 +70,10 @@ const DepartmentDetails = () => {
         fetchData();
     }, [deptName]);
 
-    const filteredStudents = students.filter(s =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.phone.includes(searchTerm)
+    const filteredStudents = (students || []).filter(s =>
+        (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(s.phone || '').includes(searchTerm) ||
+        String(s.id || '').includes(searchTerm)
     );
 
     if (loading) return (
@@ -156,7 +159,7 @@ const DepartmentDetails = () => {
                                                     color: 'white',
                                                     fontWeight: 700
                                                 }}>
-                                                    {student.name[0].toUpperCase()}
+                                                    {(student.name?.[0] || 'S').toUpperCase()}
                                                 </div>
                                                 <div style={{ fontWeight: 700, color: '#1e293b' }}>{student.name}</div>
                                             </div>

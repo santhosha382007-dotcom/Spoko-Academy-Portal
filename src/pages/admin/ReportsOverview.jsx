@@ -70,7 +70,8 @@ const ReportsOverview = () => {
     });
 
     const filtered = studentMetrics.filter(s => {
-        const matchesDept = filterDept === 'All' || s.details?.department === filterDept;
+        const sDept = s.department || s.details?.department;
+        const matchesDept = filterDept === 'All' || sDept === filterDept;
         const matchesSearch =
             (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             String(s.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
