@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
     Users, CheckCircle, Award, Calendar, Trash2, ClipboardList, Send, Bell, 
     UserCheck, Shield, Smartphone, PlusCircle, ArrowRight, BookOpen, TrendingUp,
-    Building2, Activity, Clock, BarChart2
+    Building2, Activity, Clock, BarChart2, FileUp, Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
@@ -11,8 +11,7 @@ import { isWindowsPlatform } from '../utils/platform';
 
 const AcademyActionHub = ({ user }) => {
     const isAdmin = user?.role === 'admin';
-    const isWindows = isWindowsPlatform();
-    const showAttendance = isAdmin || !isWindows;
+    const isStaff = user?.role === 'staff';
 
     return (
         <section className="dashboard-hero-section">
@@ -22,7 +21,7 @@ const AcademyActionHub = ({ user }) => {
                         Welcome back, <span>{user?.name}</span>
                     </h2>
                     <p className="welcome-subtitle">
-                        Spoko Academy Institutional Command Portal • <strong className="role-tag">{user?.role}</strong>
+                        Spoko Academy Institutional Command Portal • <strong className="role-tag">{isStaff ? `${user?.department || 'Department'} Faculty` : user?.role}</strong>
                     </p>
                 </div>
                 <div className="system-status-indicator">
@@ -63,7 +62,7 @@ const AcademyActionHub = ({ user }) => {
                             </div>
                             <div className="tile-content">
                                 <h4>Attendance Oversight</h4>
-                                <p>Multi-campus geofence punch roster</p>
+                                <p>Student attendance roster & records</p>
                             </div>
                             <ArrowRight size={18} className="tile-arrow" />
                         </Link>
@@ -75,6 +74,52 @@ const AcademyActionHub = ({ user }) => {
                             <div className="tile-content">
                                 <h4>Performance Reports</h4>
                                 <p>Dossiers, charts & exportable stats</p>
+                            </div>
+                            <ArrowRight size={18} className="tile-arrow" />
+                        </Link>
+                    </>
+                ) : isStaff ? (
+                    <>
+                        <Link to="/staff/students" className="action-tile">
+                            <div className="tile-icon-box bg-sky">
+                                <Users size={24} />
+                            </div>
+                            <div className="tile-content">
+                                <h4>Department Students</h4>
+                                <p>Roster of {user?.department || 'your'} students</p>
+                            </div>
+                            <ArrowRight size={18} className="tile-arrow" />
+                        </Link>
+
+                        <Link to="/staff/import-questions" className="action-tile">
+                            <div className="tile-icon-box bg-indigo">
+                                <FileUp size={24} />
+                            </div>
+                            <div className="tile-content">
+                                <h4>Import Questions (PDF)</h4>
+                                <p>Bulk import PDF questions for {user?.department}</p>
+                            </div>
+                            <ArrowRight size={18} className="tile-arrow" />
+                        </Link>
+
+                        <Link to="/staff/questions" className="action-tile">
+                            <div className="tile-icon-box bg-violet">
+                                <BookOpen size={24} />
+                            </div>
+                            <div className="tile-content">
+                                <h4>Question Bank</h4>
+                                <p>Manage {user?.department} curated questions</p>
+                            </div>
+                            <ArrowRight size={18} className="tile-arrow" />
+                        </Link>
+
+                        <Link to="/staff/results" className="action-tile">
+                            <div className="tile-icon-box bg-emerald">
+                                <TrendingUp size={24} />
+                            </div>
+                            <div className="tile-content">
+                                <h4>Student Results</h4>
+                                <p>Department scores and feedback</p>
                             </div>
                             <ArrowRight size={18} className="tile-arrow" />
                         </Link>
@@ -103,29 +148,16 @@ const AcademyActionHub = ({ user }) => {
                             <ArrowRight size={18} className="tile-arrow" />
                         </Link>
 
-                        {showAttendance ? (
-                            <Link to="/my-attendance" className="action-tile">
-                                <div className="tile-icon-box bg-amber">
-                                    <Calendar size={24} />
-                                </div>
-                                <div className="tile-content">
-                                    <h4>Daily Attendance</h4>
-                                    <p>GPS & SIM verified attendance clock-in</p>
-                                </div>
-                                <ArrowRight size={18} className="tile-arrow" />
-                            </Link>
-                        ) : (
-                            <Link to="/leave" className="action-tile">
-                                <div className="tile-icon-box bg-amber">
-                                    <Calendar size={24} />
-                                </div>
-                                <div className="tile-content">
-                                    <h4>Leave Applications</h4>
-                                    <p>Submit and track student leave requests</p>
-                                </div>
-                                <ArrowRight size={18} className="tile-arrow" />
-                            </Link>
-                        )}
+                        <Link to="/my-attendance" className="action-tile">
+                            <div className="tile-icon-box bg-amber">
+                                <Calendar size={24} />
+                            </div>
+                            <div className="tile-content">
+                                <h4>Daily Attendance</h4>
+                                <p>View status & mark attendance</p>
+                            </div>
+                            <ArrowRight size={18} className="tile-arrow" />
+                        </Link>
 
                         <Link to="/settings" className="action-tile">
                             <div className="tile-icon-box bg-violet">
@@ -161,20 +193,23 @@ const Dashboard = () => {
                     ? api.getResultsByUserId(user.id)
                     : api.getResults();
 
+                const isStaff = user?.role === 'staff';
+                const shouldFetchUsers = isAdmin || isStaff;
+
                 const [examsData, resultsData, usersData, attendanceData, deptsData] = await Promise.all([
                     api.getExams(),
                     resultsPromise,
-                    isAdmin ? api.getUsers() : Promise.resolve([]),
-                    isAdmin ? api.getAttendance() : Promise.resolve({}),
+                    shouldFetchUsers ? api.getUsers() : Promise.resolve([]),
+                    api.getAttendance().catch(() => ({})),
                     api.getDepartments().catch(() => [])
                 ]);
 
                 setExams(examsData || []);
                 setResults(resultsData || []);
                 setDepartments(deptsData || []);
-                if (isAdmin) {
+                setAttendance(attendanceData || {});
+                if (shouldFetchUsers) {
                     setUsersList(usersData || []);
-                    setAttendance(attendanceData || {});
                 }
 
                 const announcementsData = await api.getAnnouncements();
@@ -214,12 +249,25 @@ const Dashboard = () => {
                 />
             )}
 
+            {user?.role === 'staff' && (
+                <StaffView 
+                    user={user}
+                    users={usersList}
+                    exams={exams}
+                    results={results}
+                    departments={departments}
+                    announcements={announcements}
+                    attendance={attendance}
+                />
+            )}
+
             {user?.role === 'student' && (
                 <StudentView 
                     exams={exams} 
                     results={results} 
                     user={user} 
                     announcements={announcements} 
+                    attendance={attendance}
                 />
             )}
 
@@ -709,7 +757,7 @@ const AdminView = ({ exams, results, users, departments = [], attendance, onDele
                             <h4 style={{ margin: 0, color: '#166534', fontSize: '0.92rem' }}>Academic Directive</h4>
                         </div>
                         <p style={{ fontSize: '0.82rem', color: '#15803d', margin: 0, lineHeight: 1.5 }}>
-                            All departments are operating under the 2026 Academic Curriculum. Regular attendance is synced via mobile geofence records.
+                            All departments are operating under the 2026 Academic Curriculum. Daily attendance records and academic progress are regularly updated.
                         </p>
                     </div>
                 </div>
@@ -718,13 +766,16 @@ const AdminView = ({ exams, results, users, departments = [], attendance, onDele
     );
 };
 
-const StudentView = ({ exams, results, user, announcements }) => {
-    const isWindows = isWindowsPlatform();
+const StudentView = ({ exams, results, user, announcements, attendance = {} }) => {
     const myDept = user?.department || user?.details?.department || 'General';
     const recommended = exams.filter(e => !e.department || e.department === 'All' || e.department === myDept).slice(0, 4);
     const myResults = results.slice(0, 5);
     const completedCount = results.length;
     const avgScore = completedCount > 0 ? Math.round(results.reduce((acc, curr) => acc + (curr.score || 0), 0) / completedCount) : 0;
+
+    const myAttendanceDays = Object.values(attendance).map(day => day[user?.id]).filter(Boolean);
+    const myPresentCount = myAttendanceDays.filter(st => st.toLowerCase() === 'present').length;
+    const attendanceRate = myAttendanceDays.length > 0 ? Math.round((myPresentCount / myAttendanceDays.length) * 100) : 100;
 
     const myAnnouncements = announcements.filter(a =>
         a.target === 'all' ||
@@ -771,11 +822,14 @@ const StudentView = ({ exams, results, user, announcements }) => {
 
                 <div className="stat-card">
                     <div className="stat-info">
-                        <h3>{isWindows ? 'Mobile Only' : 'GPS Active'}</h3>
-                        <p>{isWindows ? 'Attendance Restriction' : 'SIM & Geofence Verified'}</p>
+                        <h3>{attendanceRate}%</h3>
+                        <p>Attendance Rate</p>
+                        <div className="progress-bar-mini">
+                            <div className="progress-fill" style={{ width: `${attendanceRate}%`, backgroundColor: '#10b981' }} />
+                        </div>
                     </div>
                     <div className="stat-icon bg-violet">
-                        <Smartphone size={26} />
+                        <Calendar size={26} />
                     </div>
                 </div>
             </div>
@@ -876,6 +930,218 @@ const StudentView = ({ exams, results, user, announcements }) => {
                             </div>
                         )}
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const StaffView = ({ user, users = [], exams = [], results = [], departments = [], announcements = [], attendance = {} }) => {
+    const myDept = user?.department || user?.details?.department || 'General';
+    const deptStudents = users.filter(u => {
+        if (u.role !== 'student') return false;
+        const sDept = u.department || u.details?.department;
+        return sDept && sDept.toLowerCase() === myDept.toLowerCase();
+    });
+
+    const [deptQuestionsCount, setDeptQuestionsCount] = useState(0);
+
+    useEffect(() => {
+        api.getQuestions().then(qs => {
+            const count = (qs || []).filter(q => 
+                (q.department && q.department.toLowerCase() === myDept.toLowerCase()) ||
+                (q.subject && q.subject.toLowerCase() === myDept.toLowerCase())
+            ).length;
+            setDeptQuestionsCount(count);
+        }).catch(() => {});
+    }, [myDept]);
+
+    // Results of department students
+    const deptStudentIds = new Set(deptStudents.map(s => String(s.id)));
+    const deptResults = results.filter(r => deptStudentIds.has(String(r.userId)) || deptStudentIds.has(String(r.studentId)));
+
+    const deptAvgScore = deptResults.length > 0
+        ? Math.round(deptResults.reduce((acc, r) => acc + (Number(r.percentage) || (Number(r.score) / (Number(r.totalMarks) || 100)) * 100 || 0), 0) / deptResults.length)
+        : 0;
+
+    const myAnnouncements = announcements.filter(a =>
+        a.target === 'all' ||
+        a.target === 'staff' ||
+        a.department === myDept
+    );
+
+    return (
+        <div className="student-views-root">
+            {/* KPI Cards */}
+            <div className="stats-grid">
+                <div className="stat-card">
+                    <div className="stat-info">
+                        <h3>{myDept}</h3>
+                        <p>Assigned Department</p>
+                    </div>
+                    <div className="stat-icon bg-indigo">
+                        <Building2 size={26} />
+                    </div>
+                </div>
+
+                <div className="stat-card">
+                    <div className="stat-info">
+                        <h3>{deptStudents.length}</h3>
+                        <p>My Department Students</p>
+                    </div>
+                    <div className="stat-icon bg-sky">
+                        <Users size={26} />
+                    </div>
+                </div>
+
+                <div className="stat-card">
+                    <div className="stat-info">
+                        <h3>{deptQuestionsCount}</h3>
+                        <p>Questions in Bank</p>
+                    </div>
+                    <div className="stat-icon bg-violet">
+                        <BookOpen size={26} />
+                    </div>
+                </div>
+
+                <div className="stat-card">
+                    <div className="stat-info">
+                        <h3>{deptAvgScore}%</h3>
+                        <p>Dept Average Score</p>
+                        <div className="progress-bar-mini">
+                            <div className="progress-fill" style={{ width: `${deptAvgScore}%`, backgroundColor: '#10b981' }} />
+                        </div>
+                    </div>
+                    <div className="stat-icon bg-emerald">
+                        <TrendingUp size={26} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Official Announcements */}
+            {myAnnouncements.length > 0 && (
+                <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid #4f46e5' }}>
+                    <div className="section-header-row" style={{ marginBottom: '0.75rem' }}>
+                        <h3>🔔 Department & Institutional Broadcasts</h3>
+                        <span className="badge badge-primary">{myAnnouncements.length} New</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {myAnnouncements.map((ann, idx) => (
+                            <div key={idx} style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <strong style={{ fontSize: '0.92rem', color: '#1e293b' }}>{ann.title}</strong>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{new Date(ann.date || Date.now()).toLocaleDateString()}</span>
+                                </div>
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>{ann.content}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Department Students Roster Section */}
+            <div className="card" style={{ marginBottom: '2rem' }}>
+                <div className="section-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>My Department Students ({deptStudents.length})</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>Students enrolled in {myDept} Department</p>
+                    </div>
+                    <Link to="/staff/students" className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        View All Students <ArrowRight size={14} />
+                    </Link>
+                </div>
+
+                {deptStudents.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                        <Users size={36} style={{ color: '#94a3b8', margin: '0 auto 0.5rem' }} />
+                        <p style={{ color: '#64748b', margin: 0 }}>No students registered under {myDept} Department yet.</p>
+                    </div>
+                ) : (
+                    <div className="table-responsive">
+                        <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>STUDENT</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>CONTACT</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>BATCH</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>STATUS</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: 700, color: '#475569', textAlign: 'right' }}>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {deptStudents.slice(0, 5).map(student => (
+                                    <tr key={student.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <td style={{ padding: '0.75rem 1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <img
+                                                    src={student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name || 'Student')}&background=e2e8f0&color=475569`}
+                                                    alt={student.name}
+                                                    style={{ width: '34px', height: '34px', borderRadius: '50%' }}
+                                                />
+                                                <div>
+                                                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{student.name}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ID: {student.id}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#334155' }}>{student.phone || '—'}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{student.email || student.details?.email || '—'}</div>
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                                            {student.details?.batch || student.batch || '2026-A'}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem' }}>
+                                            <span className={`badge ${(student.status || 'Active').toLowerCase() === 'active' ? 'badge-success' : 'badge-secondary'}`}>
+                                                {student.status || 'Active'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                            <Link
+                                                to={`/admin/reports/${student.id}`}
+                                                className="btn btn-outline btn-sm"
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}
+                                            >
+                                                <Eye size={13} /> View Report
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            {/* Question Import Banner */}
+            <div style={{
+                background: 'linear-gradient(135deg, #312e81 0%, #4338ca 100%)',
+                borderRadius: '16px',
+                padding: '1.75rem 2rem',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1.5rem',
+                marginBottom: '2rem'
+            }}>
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                        <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{myDept} Question Portal</span>
+                    </div>
+                    <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.4rem', fontWeight: 800 }}>Import Question Bank Papers</h2>
+                    <p style={{ margin: 0, color: '#c7d2fe', fontSize: '0.9rem', maxWidth: '500px' }}>
+                        Upload PDF exam question sheets directly into the {myDept} Question Bank with automatic question & option detection.
+                    </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <Link to="/staff/questions" className="btn" style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
+                        <BookOpen size={16} /> Open Question Bank
+                    </Link>
+                    <Link to="/staff/import-questions" className="btn btn-primary" style={{ background: '#7c3aed', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FileUp size={16} /> Import PDF Questions
+                    </Link>
                 </div>
             </div>
         </div>

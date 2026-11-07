@@ -2,7 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import { Shield, AlertTriangle, AlertCircle, Maximize2, Clock, CheckCircle2, ChevronLeft, ChevronRight, Check, XCircle, RotateCcw, Lock } from 'lucide-react';
+import { 
+    Shield, AlertTriangle, AlertCircle, Maximize2, Clock, CheckCircle2, 
+    ChevronLeft, ChevronRight, Check, XCircle, RotateCcw, Lock, Printer, 
+    Award, BarChart2, Filter, FileText, ArrowRight, HelpCircle, CheckCircle,
+    Download
+} from 'lucide-react';
 
 const ExamTaker = () => {
     const { user } = useAuth();
@@ -18,6 +23,7 @@ const ExamTaker = () => {
     // Stages: 'instructions' | 'in_progress' | 'submitted'
     const [examStage, setExamStage] = useState('instructions');
     const [calculatedResult, setCalculatedResult] = useState(null);
+    const [reviewFilter, setReviewFilter] = useState('all'); // 'all' | 'correct' | 'incorrect' | 'unanswered'
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -290,7 +296,26 @@ const ExamTaker = () => {
 
             const response = await api.submitAssessmentBackend(submitPayload);
             if (response.success && response.result) {
-                setCalculatedResult(response.result);
+                const res = response.result;
+                if (!res.questionReview || res.questionReview.length === 0) {
+                    res.questionReview = questions.map((q, idx) => {
+                        const userAns = answersRef.current[q.id];
+                        const isAttempted = userAns !== undefined && userAns !== null && userAns !== '';
+                        const isCorrect = isAttempted && Number(userAns) === Number(q.correctAnswer);
+                        return {
+                            id: q.id || (idx + 1),
+                            questionIndex: idx + 1,
+                            question: q.question,
+                            options: q.options || [],
+                            userAnswer: isAttempted ? Number(userAns) : null,
+                            correctAnswer: Number(q.correctAnswer),
+                            isCorrect,
+                            isAttempted,
+                            explanation: q.explanation || ''
+                        };
+                    });
+                }
+                setCalculatedResult(res);
                 setExamStage('submitted');
                 // Clean up local recovery backup
                 try {
@@ -301,14 +326,43 @@ const ExamTaker = () => {
             }
         } catch (err) {
             console.error("Backend submission error:", err);
-            alert(`Submission Error: ${err.message}. A safety report has been logged.`);
-            // Fallback safe display
+            // Fallback safe immediate calculation so report is always generated instantly
+            let correctCount = 0;
+            let attemptedCount = 0;
+            const review = questions.map((q, idx) => {
+                const userAns = answersRef.current[q.id];
+                const isAttempted = userAns !== undefined && userAns !== null && userAns !== '';
+                const isCorrect = isAttempted && Number(userAns) === Number(q.correctAnswer);
+                if (isAttempted) {
+                    attemptedCount++;
+                    if (isCorrect) correctCount++;
+                }
+                return {
+                    id: q.id || (idx + 1),
+                    questionIndex: idx + 1,
+                    question: q.question,
+                    options: q.options || [],
+                    userAnswer: isAttempted ? Number(userAns) : null,
+                    correctAnswer: Number(q.correctAnswer),
+                    isCorrect,
+                    isAttempted,
+                    explanation: q.explanation || ''
+                };
+            });
+            const scorePct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+            const passingScore = exam?.passingMarks || 50;
             setCalculatedResult({
-                examTitle: exam.title,
-                score: 0,
+                examTitle: exam?.title || 'Assessment',
+                score: scorePct,
                 totalQuestions: questions.length,
+                attemptedQuestions: attemptedCount,
+                correctAnswers: correctCount,
+                incorrectAnswers: attemptedCount - correctCount,
+                unansweredQuestions: questions.length - attemptedCount,
                 submissionType: submissionType,
-                unverified: true
+                questionReview: review,
+                isPassed: scorePct >= passingScore,
+                submittedAt: new Date().toISOString()
             });
             setExamStage('submitted');
         } finally {
@@ -417,86 +471,430 @@ const ExamTaker = () => {
     }
 
     // -------------------------------------------------------------
-    // STAGE 2: SUBMITTED / RESULT SCREEN
+    // STAGE 2: IMMEDIATE DETAILED EXAM REPORT & PERFORMANCE DOSSIER
     // -------------------------------------------------------------
     if (examStage === 'submitted') {
         const isTerminated = calculatedResult?.submissionType === 'violation_limit_reached';
         const isTimeOut = calculatedResult?.submissionType === 'time_expired';
+        const score = calculatedResult?.score ?? 0;
+        const passingScore = exam?.passingMarks || 50;
+        const isPassed = calculatedResult?.isPassed !== undefined ? calculatedResult.isPassed : score >= passingScore;
+        const reviewList = calculatedResult?.questionReview || [];
+
+        const filteredReview = reviewList.filter(item => {
+            if (reviewFilter === 'correct') return item.isCorrect;
+            if (reviewFilter === 'incorrect') return item.isAttempted && !item.isCorrect;
+            if (reviewFilter === 'unanswered') return !item.isAttempted;
+            return true;
+        });
+
+        const handlePrintReport = () => {
+            window.print();
+        };
+
+        const submittedDateFormatted = new Date(calculatedResult?.submittedAt || Date.now()).toLocaleString(undefined, {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
         return (
-            <div className="container" style={{ paddingTop: '3.5rem', paddingBottom: '3.5rem', textAlign: 'center' }}>
-                <div className="card glass-panel animate-fade-in" style={{
-                    maxWidth: '680px', margin: '0 auto', padding: '2.5rem',
-                    borderRadius: '20px', border: '1px solid #e2e8f0', background: 'white'
-                }}>
-                    {isTerminated ? (
-                        <div style={{ marginBottom: '1.5rem', color: '#dc2626' }}>
-                            <AlertTriangle size={56} style={{ margin: '0 auto' }} />
-                            <h1 style={{ color: '#dc2626', marginTop: '0.5rem', fontSize: '1.8rem' }}>Assessment Terminated</h1>
-                            <p style={{ color: '#7f1d1d' }}>Terminated automatically due to exceeding maximum allowed security violations ({violations}/{maxViolations}).</p>
+            <div className="exam-report-page-root animate-fade-in" style={{ padding: '2rem 1rem 4rem', maxWidth: '1000px', margin: '0 auto' }}>
+                {/* Print Only Header */}
+                <div className="print-only-header" style={{ display: 'none', textAlign: 'center', marginBottom: '2rem', borderBottom: '2px solid #0f172a', paddingBottom: '1rem' }}>
+                    <h1 style={{ margin: 0, fontSize: '1.6rem', color: '#0f172a' }}>Spoko Academy of Competitive Exams</h1>
+                    <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#475569' }}>Official Examination Performance Report & Candidate Evaluation</p>
+                </div>
+
+                {/* Main Report Card */}
+                <div className="card glass-panel" style={{ borderRadius: '20px', border: '1px solid #e2e8f0', padding: '2rem', marginBottom: '2rem', background: '#ffffff' }}>
+                    {/* Top Status Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                        <div>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#4f46e5', background: '#eef2ff', padding: '4px 10px', borderRadius: '6px' }}>
+                                {exam?.department || user?.department || 'General Assessment'}
+                            </span>
+                            <h1 style={{ margin: '0.5rem 0 0.25rem', fontSize: '1.75rem', color: '#0f172a', fontWeight: 800 }}>
+                                {exam?.title || calculatedResult?.examTitle || 'Assessment Results'}
+                            </h1>
+                            <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b' }}>
+                                Submitted on: <strong>{submittedDateFormatted}</strong>
+                            </p>
                         </div>
-                    ) : isTimeOut ? (
-                        <div style={{ marginBottom: '1.5rem', color: '#f59e0b' }}>
-                            <Clock size={56} style={{ margin: '0 auto' }} />
-                            <h1 style={{ color: '#b45309', marginTop: '0.5rem', fontSize: '1.8rem' }}>Time Expired — Auto-Submitted</h1>
-                            <p style={{ color: '#78350f' }}>Your allocated test duration ended. Answers were automatically submitted and calculated.</p>
+
+                        {/* Pass / Fail / Terminated Badge */}
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                padding: '0.5rem 1.1rem',
+                                borderRadius: '25px',
+                                fontSize: '0.9rem',
+                                fontWeight: 800,
+                                background: isTerminated ? '#fee2e2' : isPassed ? '#dcfce7' : '#fee2e2',
+                                color: isTerminated ? '#991b1b' : isPassed ? '#166534' : '#991b1b',
+                                border: `1px solid ${isTerminated ? '#fca5a5' : isPassed ? '#86efac' : '#fca5a5'}`
+                            }}>
+                                {isTerminated ? <AlertTriangle size={18} /> : isPassed ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                                <span>{isTerminated ? 'TERMINATED' : isPassed ? 'PASSED / QUALIFIED' : 'NEEDS REVISION'}</span>
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.35rem' }}>
+                                Passing Mark: {passingScore}%
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Candidate Metadata Strip */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '1rem',
+                        padding: '1rem 1.25rem',
+                        background: '#f8fafc',
+                        borderRadius: '14px',
+                        border: '1px solid #e2e8f0',
+                        marginBottom: '2rem',
+                        fontSize: '0.88rem'
+                    }}>
+                        <div>
+                            <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Candidate Name</span>
+                            <strong style={{ color: '#0f172a' }}>{user?.name || calculatedResult?.studentName}</strong>
+                        </div>
+                        <div>
+                            <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Student ID / Phone</span>
+                            <strong style={{ color: '#0f172a' }}>{user?.phone || user?.id}</strong>
+                        </div>
+                        <div>
+                            <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Department</span>
+                            <strong style={{ color: '#0f172a' }}>{user?.department || user?.details?.department || 'General'}</strong>
+                        </div>
+                        <div>
+                            <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>Submission Mode</span>
+                            <strong style={{ color: isTimeOut ? '#b45309' : isTerminated ? '#dc2626' : '#166534' }}>
+                                {isTimeOut ? 'Time Expired (Auto)' : isTerminated ? 'Violations Limit (Auto)' : 'Online Final Submit'}
+                            </strong>
+                        </div>
+                    </div>
+
+                    {/* Primary Scorecard KPIs */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                        gap: '1rem',
+                        marginBottom: '2rem'
+                    }}>
+                        <div style={{
+                            padding: '1.25rem',
+                            borderRadius: '16px',
+                            background: isPassed ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.9, textTransform: 'uppercase', fontWeight: 700 }}>Total Score</span>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.1 }}>{score}%</div>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '0.2rem' }}>
+                                {isPassed ? 'Standard Achieved' : 'Below Target'}
+                            </span>
+                        </div>
+
+                        <div style={{ padding: '1.25rem', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Total Questions</span>
+                            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a' }}>{calculatedResult?.totalQuestions || questions.length}</div>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Assessed</span>
+                        </div>
+
+                        <div style={{ padding: '1.25rem', borderRadius: '16px', background: '#ecfdf5', border: '1px solid #a7f3d0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#065f46', textTransform: 'uppercase', fontWeight: 700 }}>Correct</span>
+                            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#166534' }}>{calculatedResult?.correctAnswers ?? 0}</div>
+                            <span style={{ fontSize: '0.75rem', color: '#166534' }}>Questions</span>
+                        </div>
+
+                        <div style={{ padding: '1.25rem', borderRadius: '16px', background: '#fef2f2', border: '1px solid #fecaca', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#991b1b', textTransform: 'uppercase', fontWeight: 700 }}>Incorrect</span>
+                            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#b91c1c' }}>{calculatedResult?.incorrectAnswers ?? 0}</div>
+                            <span style={{ fontSize: '0.75rem', color: '#b91c1c' }}>Questions</span>
+                        </div>
+
+                        <div style={{ padding: '1.25rem', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Unanswered</span>
+                            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#475569' }}>{calculatedResult?.unansweredQuestions ?? 0}</div>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Skipped</span>
+                        </div>
+                    </div>
+
+                    {/* Secondary Security & Accuracy Metrics */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '0.75rem',
+                        padding: '0.75rem 1.25rem',
+                        borderRadius: '12px',
+                        background: '#f1f5f9',
+                        fontSize: '0.82rem',
+                        color: '#475569',
+                        marginBottom: '2rem'
+                    }}>
+                        <div>
+                            Accuracy Rate: <strong>
+                                {calculatedResult?.attemptedQuestions
+                                    ? Math.round(((calculatedResult?.correctAnswers ?? 0) / calculatedResult.attemptedQuestions) * 100)
+                                    : 0}%
+                            </strong>
+                        </div>
+                        <div>
+                            Allocated Duration: <strong>{exam?.duration || 0} minutes</strong>
+                        </div>
+                        <div>
+                            Proctoring Violations Recorded: <strong style={{ color: violations > 0 ? '#dc2626' : '#166534' }}>{violations}</strong>
+                        </div>
+                        <div>
+                            Status: <strong style={{ color: '#10b981' }}>✓ Synced & Recorded in Institutional Register</strong>
+                        </div>
+                    </div>
+
+                    {/* Action Bar (Hidden in Print) */}
+                    <div className="report-action-bar no-print" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button
+                            type="button"
+                            onClick={handlePrintReport}
+                            className="btn btn-outline"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, padding: '0.75rem 1.4rem' }}
+                        >
+                            <Printer size={18} /> Print / Save PDF Report
+                        </button>
+
+                        <Link
+                            to="/history"
+                            className="btn btn-outline"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, padding: '0.75rem 1.4rem' }}
+                        >
+                            <FileText size={18} /> View All My Reports
+                        </Link>
+
+                        <Link
+                            to="/exam-hub"
+                            className="btn btn-primary"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, padding: '0.75rem 1.4rem', marginLeft: 'auto' }}
+                        >
+                            Return to Assessment Hub <ArrowRight size={18} />
+                        </Link>
+                    </div>
+                </div>
+
+                {/* QUESTION-BY-QUESTION DETAILED EVALUATION */}
+                <div className="card glass-panel" style={{ borderRadius: '20px', border: '1px solid #e2e8f0', padding: '2rem', background: '#ffffff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#0f172a', fontWeight: 800 }}>
+                                Question-by-Question Evaluation
+                            </h2>
+                            <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                Full immediate breakdown of your selections against correct answers and solutions.
+                            </p>
+                        </div>
+
+                        {/* Filter Tabs (Hidden in Print) */}
+                        <div className="no-print" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                onClick={() => setReviewFilter('all')}
+                                style={{
+                                    padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid #cbd5e1',
+                                    background: reviewFilter === 'all' ? '#0f172a' : '#ffffff',
+                                    color: reviewFilter === 'all' ? '#ffffff' : '#475569',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                All ({reviewList.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setReviewFilter('correct')}
+                                style={{
+                                    padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid #86efac',
+                                    background: reviewFilter === 'correct' ? '#10b981' : '#ffffff',
+                                    color: reviewFilter === 'correct' ? '#ffffff' : '#166534',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Correct ({calculatedResult?.correctAnswers ?? 0})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setReviewFilter('incorrect')}
+                                style={{
+                                    padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid #fca5a5',
+                                    background: reviewFilter === 'incorrect' ? '#ef4444' : '#ffffff',
+                                    color: reviewFilter === 'incorrect' ? '#ffffff' : '#991b1b',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Incorrect ({calculatedResult?.incorrectAnswers ?? 0})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setReviewFilter('unanswered')}
+                                style={{
+                                    padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid #cbd5e1',
+                                    background: reviewFilter === 'unanswered' ? '#64748b' : '#ffffff',
+                                    color: reviewFilter === 'unanswered' ? '#ffffff' : '#475569',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Unanswered ({calculatedResult?.unansweredQuestions ?? 0})
+                            </button>
+                        </div>
+                    </div>
+
+                    {filteredReview.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+                            No questions match the "{reviewFilter}" filter.
                         </div>
                     ) : (
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <CheckCircle2 size={56} color="#10b981" style={{ margin: '0 auto' }} />
-                            <h1 style={{ color: 'var(--color-primary-dark)', marginTop: '0.5rem', fontSize: '1.8rem' }}>Assessment Submitted!</h1>
-                            <p className="text-muted">You have successfully completed <b>{exam.title}</b>.</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            {filteredReview.map((item, idx) => {
+                                const qNumber = item.questionIndex || idx + 1;
+                                const isCorrect = item.isCorrect;
+                                const isAttempted = item.isAttempted;
+
+                                return (
+                                    <div
+                                        key={item.id || idx}
+                                        style={{
+                                            border: `1px solid ${isCorrect ? '#86efac' : isAttempted ? '#fca5a5' : '#cbd5e1'}`,
+                                            borderRadius: '14px',
+                                            padding: '1.25rem',
+                                            background: isCorrect ? '#f0fdf4' : isAttempted ? '#fffbfa' : '#f8fafc',
+                                            pageBreakInside: 'avoid'
+                                        }}
+                                    >
+                                        {/* Question Header & Status Badge */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.75rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                <span style={{
+                                                    width: '28px', height: '28px', borderRadius: '50%',
+                                                    background: isCorrect ? '#10b981' : isAttempted ? '#ef4444' : '#64748b',
+                                                    color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: '0.85rem', fontWeight: 800, flexShrink: 0
+                                                }}>
+                                                    {qNumber}
+                                                </span>
+                                                <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a', fontWeight: 700, lineHeight: 1.4 }}>
+                                                    {item.question}
+                                                </h4>
+                                            </div>
+
+                                            <span style={{
+                                                padding: '0.25rem 0.65rem',
+                                                borderRadius: '20px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 800,
+                                                flexShrink: 0,
+                                                background: isCorrect ? '#dcfce7' : isAttempted ? '#fee2e2' : '#e2e8f0',
+                                                color: isCorrect ? '#166534' : isAttempted ? '#991b1b' : '#475569'
+                                            }}>
+                                                {isCorrect ? '✓ Correct' : isAttempted ? '✗ Incorrect' : '○ Skipped'}
+                                            </span>
+                                        </div>
+
+                                        {/* Options List */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                            {(item.options || []).map((opt, optIdx) => {
+                                                const isUserChoice = item.userAnswer === optIdx;
+                                                const isCorrectChoice = item.correctAnswer === optIdx;
+
+                                                let optBg = '#ffffff';
+                                                let optBorder = '#e2e8f0';
+                                                let optColor = '#334155';
+                                                let badgeText = null;
+
+                                                if (isCorrectChoice) {
+                                                    optBg = '#dcfce7';
+                                                    optBorder = '#10b981';
+                                                    optColor = '#065f46';
+                                                    badgeText = isUserChoice ? 'Your Answer (Correct)' : 'Correct Answer';
+                                                } else if (isUserChoice) {
+                                                    optBg = '#fee2e2';
+                                                    optBorder = '#ef4444';
+                                                    optColor = '#991b1b';
+                                                    badgeText = 'Your Answer (Incorrect)';
+                                                }
+
+                                                const optionLetter = String.fromCharCode(65 + optIdx);
+
+                                                return (
+                                                    <div
+                                                        key={optIdx}
+                                                        style={{
+                                                            padding: '0.65rem 0.85rem',
+                                                            borderRadius: '10px',
+                                                            background: optBg,
+                                                            border: `1.5px solid ${optBorder}`,
+                                                            color: optColor,
+                                                            fontSize: '0.85rem',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            gap: '0.5rem'
+                                                        }}
+                                                    >
+                                                        <span><strong>{optionLetter}.</strong> {opt}</span>
+                                                        {badgeText && (
+                                                            <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', background: 'rgba(0,0,0,0.06)' }}>
+                                                                {badgeText}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Solution / Explanation Box */}
+                                        {item.explanation && (
+                                            <div style={{ marginTop: '0.85rem', padding: '0.75rem 1rem', background: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe', fontSize: '0.82rem', color: '#1e40af' }}>
+                                                <strong>Explanation: </strong> {item.explanation}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
-
-                    {/* Official Backend Score */}
-                    <div className="score-circle" style={{
-                        width: '140px', height: '140px', borderRadius: '50%',
-                        background: '#f8fafc', margin: '0 auto 1.5rem',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        border: `5px solid ${calculatedResult?.score >= 50 ? '#10b981' : '#ef4444'}`
-                    }}>
-                        <span style={{ fontSize: '2.75rem', fontWeight: 900, color: calculatedResult?.score >= 50 ? '#10b981' : '#ef4444', lineHeight: 1 }}>
-                            {calculatedResult?.score ?? 0}%
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', textTransform: 'uppercase', fontWeight: 700 }}>
-                            Score
-                        </span>
-                    </div>
-
-                    <div style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem',
-                        marginBottom: '2rem', textAlign: 'left'
-                    }}>
-                        <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Total Questions</span>
-                            <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#1e293b' }}>{calculatedResult?.totalQuestions || questions.length}</div>
-                        </div>
-                        <div style={{ background: '#ecfdf5', padding: '1rem', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#065f46' }}>Correct Answers</span>
-                            <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#166534' }}>{calculatedResult?.correctAnswers ?? 0}</div>
-                        </div>
-                        <div style={{ background: '#fef2f2', padding: '1rem', borderRadius: '12px', border: '1px solid #fecaca' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#991b1b' }}>Incorrect</span>
-                            <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#b91c1c' }}>{calculatedResult?.incorrectAnswers ?? 0}</div>
-                        </div>
-                        <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Unanswered</span>
-                            <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#475569' }}>{calculatedResult?.unansweredQuestions ?? 0}</div>
-                        </div>
-                    </div>
-
-                    <div style={{
-                        padding: '0.75rem 1rem', background: '#f1f5f9', borderRadius: '10px',
-                        fontSize: '0.8rem', color: '#64748b', marginBottom: '2rem'
-                    }}>
-                        Verified on Server • Violations Recorded: <strong>{violations}</strong> • Submission Type: <strong>{calculatedResult?.submissionType || 'manual'}</strong>
-                    </div>
-
-                    <Link to="/exam-hub" className="btn btn-primary full-width" style={{ padding: '0.9rem' }}>
-                        Return to Assessment Dashboard
-                    </Link>
                 </div>
+
+                <style>{`
+                    @media print {
+                        body {
+                            background: #ffffff !important;
+                        }
+                        .print-only-header {
+                            display: block !important;
+                        }
+                        .no-print {
+                            display: none !important;
+                        }
+                        .exam-report-page-root {
+                            max-width: 100% !important;
+                            padding: 0 !important;
+                        }
+                        .card {
+                            border: none !important;
+                            box-shadow: none !important;
+                            padding: 0 !important;
+                            margin-bottom: 1.5rem !important;
+                        }
+                    }
+                `}</style>
             </div>
         );
     }

@@ -3,20 +3,6 @@ const path = require('path');
 
 const dbPath = process.env.DB_PATH || (fs.existsSync(path.join(__dirname, 'db.json')) ? path.join(__dirname, 'db.json') : path.join(__dirname, '..', 'db.json'));
 
-// Haversine formula to calculate accurate geospatial distance in meters
-function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Radius of Earth in meters
-    const toRad = (value) => (value * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round(R * c);
-}
-
 // Helpers to read and safely write db.json
 const getDb = () => {
     try {
@@ -83,91 +69,14 @@ module.exports = async (req, res, next) => {
     }
 
     // -------------------------------------------------------------
-    // 1. MULTI-CAMPUS GEO-FENCING ATTENDANCE VERIFICATION
+    // 1. ATTENDANCE VERIFICATION (GPS Verification Removed)
     // -------------------------------------------------------------
     if (req.url.startsWith('/api/attendance/verify-location') && req.method === 'POST') {
-        try {
-            const body = await getRequestBody(req);
-            const { latitude, longitude, userId, branchId } = body;
-
-            if (latitude === undefined || longitude === undefined) {
-                return res.status(400).jsonp({
-                    error: "Invalid Parameters",
-                    message: "Latitude and Longitude are required."
-                });
-            }
-
-            const db = getDb();
-            const branches = db.location_settings || [];
-            if (branches.length === 0) {
-                return res.status(500).jsonp({ error: "No campus branches configured in location_settings." });
-            }
-
-            const userLat = parseFloat(latitude);
-            const userLon = parseFloat(longitude);
-
-            // Determine target branch
-            let targetBranch = null;
-            if (branchId) {
-                targetBranch = branches.find(b => b.id === branchId || b.branchCode === branchId);
-            }
-            if (!targetBranch && userId) {
-                const user = (db.users || []).find(u => u.id === userId);
-                const assignedBranch = user?.details?.assignedBranchId || user?.assignedBranchId;
-                if (assignedBranch) {
-                    targetBranch = branches.find(b => b.id === assignedBranch || b.branchCode === assignedBranch);
-                }
-            }
-
-            // If still no branch specified, match closest branch
-            if (!targetBranch) {
-                let closestDistance = Infinity;
-                branches.forEach(b => {
-                    const dist = calculateHaversineDistanceMeters(userLat, userLon, parseFloat(b.latitude), parseFloat(b.longitude));
-                    if (dist < closestDistance) {
-                        closestDistance = dist;
-                        targetBranch = b;
-                    }
-                });
-            }
-
-            if (!targetBranch) targetBranch = branches[0];
-
-            const orgLat = parseFloat(targetBranch.latitude);
-            const orgLon = parseFloat(targetBranch.longitude);
-            const radius = parseFloat(targetBranch.allowedRadiusMeters) || 500;
-            const distanceMeters = calculateHaversineDistanceMeters(userLat, userLon, orgLat, orgLon);
-            const isValid = distanceMeters <= radius;
-
-            console.log(`[ATTENDANCE GEO-CHECK] User: ${userId || 'unknown'} | Branch: ${targetBranch.orgName} | Distance: ${distanceMeters}m | Allowed: ${radius}m | Result: ${isValid ? 'VALID' : 'REJECTED'}`);
-
-            return res.jsonp({
-                success: true,
-                valid: isValid,
-                distanceMeters,
-                allowedRadiusMeters: radius,
-                matchedBranch: {
-                    id: targetBranch.id,
-                    orgName: targetBranch.orgName,
-                    branchCode: targetBranch.branchCode,
-                    latitude: orgLat,
-                    longitude: orgLon
-                },
-                allBranches: branches.map(b => ({
-                    id: b.id,
-                    orgName: b.orgName,
-                    branchCode: b.branchCode,
-                    allowedRadiusMeters: b.allowedRadiusMeters
-                })),
-                userLocation: { latitude: userLat, longitude: userLon },
-                message: isValid
-                    ? `Attendance marked successfully at ${targetBranch.orgName}.`
-                    : `Outside permitted radius for ${targetBranch.orgName} (${distanceMeters}m away, allowed: ${radius}m).`
-            });
-        } catch (err) {
-            console.error('[ATTENDANCE GEO-CHECK ERROR]', err);
-            return res.status(500).jsonp({ error: "Location validation error", details: err.message });
-        }
+        return res.jsonp({
+            success: true,
+            valid: true,
+            message: "GPS verification has been disabled. Direct attendance enabled."
+        });
     }
 
     // -------------------------------------------------------------
@@ -448,24 +357,52 @@ module.exports = async (req, res, next) => {
             attempt.answers = mergedAnswers;
             attempt.score = scorePercentage;
 
+            // Build detailed question review for immediate & archived exam reports
+            const questionReview = questions.map((q, idx) => {
+                const userAns = mergedAnswers[q.id];
+                const isAttempted = userAns !== undefined && userAns !== null && userAns !== '';
+                const isCorrect = isAttempted && Number(userAns) === Number(q.correctAnswer);
+                return {
+                    id: q.id || (idx + 1),
+                    questionIndex: idx + 1,
+                    question: q.question,
+                    options: q.options || [],
+                    userAnswer: isAttempted ? Number(userAns) : null,
+                    correctAnswer: Number(q.correctAnswer),
+                    isCorrect,
+                    isAttempted,
+                    explanation: q.explanation || ''
+                };
+            });
+
             // 5. Create Result Record
             const user = (db.users || []).find(u => u.id === userId);
+            const passingScore = exam.passingMarks || 50;
             const resultRecord = {
                 id: Date.now(),
                 attemptId: attempt.id,
                 examId: exam.id,
                 examTitle: exam.title,
+                category: exam.category || exam.department || 'General',
+                department: exam.department || user?.department || 'General',
                 userId: user?.id || userId,
                 studentName: user?.name || 'Student',
+                studentPhone: user?.phone || '',
                 score: scorePercentage,
                 percentage: scorePercentage,
                 totalQuestions,
                 attemptedQuestions: attemptedCount,
                 correctAnswers: correctCount,
                 incorrectAnswers: incorrectCount,
+                wrongAnswers: incorrectCount,
                 unansweredQuestions: unansweredCount,
+                answers: mergedAnswers,
+                questionReview,
+                passingScore,
+                isPassed: scorePercentage >= passingScore,
                 submissionType: finalSubmissionType,
                 violationsCount: attempt.violationsCount || 0,
+                durationMinutes: exam.duration || 0,
                 submittedAt,
                 date: submittedAt
             };

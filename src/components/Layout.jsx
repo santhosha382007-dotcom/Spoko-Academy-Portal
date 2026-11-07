@@ -21,7 +21,7 @@ const getPageTitle = (pathname) => {
         case '/admin/departments':
             return { title: 'Academic Departments', subtitle: 'Institutional courses, sections, and subjects' };
         case '/admin/attendance':
-            return { title: 'Attendance Oversight', subtitle: 'Multi-campus attendance and geofence tracking' };
+            return { title: 'Attendance Oversight', subtitle: 'Student attendance tracking and records' };
         case '/admin/leave':
             return { title: 'Leave Management', subtitle: 'Student leave applications and approvals' };
         case '/admin/create-exam':
@@ -37,13 +37,21 @@ const getPageTitle = (pathname) => {
         case '/admin/audit-logs':
             return { title: 'Security & Audit Logs', subtitle: 'Authentication trail and device event history' };
         case '/my-attendance':
-            return { title: 'My Daily Attendance', subtitle: 'Verified clock-in and attendance history' };
+            return { title: 'My Daily Attendance', subtitle: 'Daily attendance status and history' };
         case '/leave':
             return { title: 'Leave Applications', subtitle: 'Request leaves and track status' };
         case '/exam-hub':
             return { title: 'Assessment Hub', subtitle: 'Live exams and departmental tests' };
         case '/history':
             return { title: 'My Test Results', subtitle: 'Exam scorecards and detailed feedback' };
+        case '/staff/students':
+            return { title: 'Department Students', subtitle: 'View and track students in your assigned department' };
+        case '/staff/import-questions':
+            return { title: 'Department Question Import', subtitle: 'Upload and parse PDF question sheets for your department' };
+        case '/staff/questions':
+            return { title: 'Department Question Bank', subtitle: 'Manage curated questions for your department' };
+        case '/staff/results':
+            return { title: 'Department Results', subtitle: 'Student assessment scores and performance breakdown' };
         case '/settings':
             return { title: 'Profile & Settings', subtitle: 'Account preferences and security config' };
         default:
@@ -57,6 +65,7 @@ const Layout = ({ children }) => {
     const location = useLocation();
     const isAdmin = user?.role === 'admin';
     const isStudent = user?.role === 'student';
+    const isStaff = user?.role === 'staff';
     const isWindows = isWindowsPlatform();
     const isMobile = isMobilePlatform();
 
@@ -220,15 +229,41 @@ const Layout = ({ children }) => {
                             </Link>
 
                             <div className="nav-group-label">{(!isCollapsed || isMobileMenuOpen) ? 'Attendance & Leave' : '•'}</div>
-                            {!isWindows && (
-                                <Link to="/my-attendance" className={`sidebar-nav-item ${isActive('/my-attendance') ? 'active' : ''}`} title="Attendance">
-                                    <Calendar size={19} className="nav-item-icon" />
-                                    {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Daily Attendance</span>}
-                                </Link>
-                            )}
+                            <Link to="/my-attendance" className={`sidebar-nav-item ${isActive('/my-attendance') ? 'active' : ''}`} title="Attendance">
+                                <Calendar size={19} className="nav-item-icon" />
+                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Daily Attendance</span>}
+                            </Link>
                             <Link to="/leave" className={`sidebar-nav-item ${isActive('/leave') ? 'active' : ''}`} title="Leave">
                                 <CalendarCheck size={19} className="nav-item-icon" />
                                 {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Leave Applications</span>}
+                            </Link>
+
+                            <div className="nav-group-label">{(!isCollapsed || isMobileMenuOpen) ? 'Account' : '•'}</div>
+                            <Link to="/settings" className={`sidebar-nav-item ${isActive('/settings') ? 'active' : ''}`} title="Profile">
+                                <UserIcon size={19} className="nav-item-icon" />
+                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Profile & Security</span>}
+                            </Link>
+                        </>
+                    )}
+
+                    {isStaff && (
+                        <>
+                            <div className="nav-group-label">{(!isCollapsed || isMobileMenuOpen) ? `${user?.department || 'Dept'} Faculty` : '•'}</div>
+                            <Link to="/staff/students" className={`sidebar-nav-item ${isActive('/staff/students') ? 'active' : ''}`} title="Department Students">
+                                <Users size={19} className="nav-item-icon" />
+                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Department Students</span>}
+                            </Link>
+                            <Link to="/staff/import-questions" className={`sidebar-nav-item ${isActive('/staff/import-questions') ? 'active' : ''}`} title="Import Questions">
+                                <FileUp size={19} className="nav-item-icon" />
+                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Import Questions (PDF)</span>}
+                            </Link>
+                            <Link to="/staff/questions" className={`sidebar-nav-item ${isActive('/staff/questions') ? 'active' : ''}`} title="Question Bank">
+                                <BookOpen size={19} className="nav-item-icon" />
+                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Question Bank</span>}
+                            </Link>
+                            <Link to="/staff/results" className={`sidebar-nav-item ${isActive('/staff/results') ? 'active' : ''}`} title="Student Results">
+                                <BarChart2 size={19} className="nav-item-icon" />
+                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Student Results</span>}
                             </Link>
 
                             <div className="nav-group-label">{(!isCollapsed || isMobileMenuOpen) ? 'Account' : '•'}</div>
@@ -304,8 +339,8 @@ const Layout = ({ children }) => {
                                     <div className="dropdown-user-header">
                                         <p className="dropdown-name">{user?.name}</p>
                                         <p className="dropdown-email">{user?.details?.email || `${user?.id}@spokoacademy.edu`}</p>
-                                        <span className={`badge ${isAdmin ? 'badge-primary' : 'badge-success'}`}>
-                                            {user?.role}
+                                        <span className={`badge ${isAdmin ? 'badge-primary' : isStaff ? 'badge-warning' : 'badge-success'}`}>
+                                            {user?.role ? user.role.toUpperCase() : 'USER'}
                                         </span>
                                     </div>
                                     <div className="dropdown-divider" />
@@ -358,23 +393,43 @@ const Layout = ({ children }) => {
                                 <span>Menu</span>
                             </button>
                         </>
+                    ) : isStaff ? (
+                        <>
+                            <Link to="/staff/students" className={`bottom-bar-link ${isActive('/staff/students') ? 'active' : ''}`}>
+                                <Users size={20} />
+                                <span>Students</span>
+                            </Link>
+                            <Link to="/staff/import-questions" className={`bottom-bar-link ${isActive('/staff/import-questions') ? 'active' : ''}`}>
+                                <FileUp size={20} />
+                                <span>Import</span>
+                            </Link>
+                            <Link to="/staff/questions" className={`bottom-bar-link ${isActive('/staff/questions') ? 'active' : ''}`}>
+                                <BookOpen size={20} />
+                                <span>Questions</span>
+                            </Link>
+                            <button 
+                                className="bottom-bar-link"
+                                onClick={() => setIsMobileMenuOpen(true)}
+                                type="button"
+                            >
+                                <Menu size={20} />
+                                <span>Menu</span>
+                            </button>
+                        </>
                     ) : (
                         <>
                             <Link to="/exam-hub" className={`bottom-bar-link ${isActive('/exam-hub') ? 'active' : ''}`}>
                                 <ClipboardList size={20} />
                                 <span>Exams</span>
                             </Link>
-                            {!isWindows ? (
-                                <Link to="/my-attendance" className={`bottom-bar-link ${isActive('/my-attendance') ? 'active' : ''}`}>
-                                    <Calendar size={20} />
-                                    <span>Attendance</span>
-                                </Link>
-                            ) : (
-                                <Link to="/history" className={`bottom-bar-link ${isActive('/history') ? 'active' : ''}`}>
-                                    <CheckCircle size={20} />
-                                    <span>Results</span>
-                                </Link>
-                            )}
+                            <Link to="/my-attendance" className={`bottom-bar-link ${isActive('/my-attendance') ? 'active' : ''}`}>
+                                <Calendar size={20} />
+                                <span>Attendance</span>
+                            </Link>
+                            <Link to="/history" className={`bottom-bar-link ${isActive('/history') ? 'active' : ''}`}>
+                                <CheckCircle size={20} />
+                                <span>Results</span>
+                            </Link>
                             <Link to="/leave" className={`bottom-bar-link ${isActive('/leave') ? 'active' : ''}`}>
                                 <CalendarCheck size={20} />
                                 <span>Leave</span>

@@ -7,14 +7,23 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const ResultsAnalysis = () => {
     const { user } = useAuth();
+    const isStaff = user?.role === 'staff';
+    const staffDept = user?.department || user?.details?.department || 'General';
+
     const [results, setResults] = useState([]);
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterDept, setFilterDept] = useState('All');
+    const [filterDept, setFilterDept] = useState(() => isStaff ? staffDept : 'All');
     const [filterExam, setFilterExam] = useState('All');
 
-    const DEPARTMENTS = ['Railways', 'Agnipath', 'TNUSRB', 'TNPSC', 'SSC GD'];
+    const DEPARTMENTS = ['Railway', 'Railways', 'SSC', 'SSC GD', 'GD', 'TNPSC', 'TNUSRB', 'Agnipath'];
+
+    useEffect(() => {
+        if (isStaff && staffDept) {
+            setFilterDept(staffDept);
+        }
+    }, [isStaff, staffDept]);
 
     useEffect(() => {
         loadData();
@@ -82,7 +91,7 @@ const ResultsAnalysis = () => {
             <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <Link to="/" className="btn-icon" style={{ background: 'white' }}><ArrowLeft size={20} /></Link>
-                    <h1>Results Analysis</h1>
+                    <h1>{isStaff ? `${staffDept} Results Analysis` : 'Results Analysis'}</h1>
                 </div>
             </header>
 
@@ -152,10 +161,16 @@ const ResultsAnalysis = () => {
                         <Search size={18} className="input-icon" />
                         <input type="text" placeholder="Search student or exam..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
-                    <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="btn btn-outline" style={{ width: '200px' }}>
-                        <option value="All">All Departments</option>
-                        {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
+                    {isStaff ? (
+                        <div style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', background: '#f1f5f9', borderRadius: '10px', fontWeight: 700, color: '#4338ca', fontSize: '0.88rem' }}>
+                            {staffDept} (Locked)
+                        </div>
+                    ) : (
+                        <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="btn btn-outline" style={{ width: '200px' }}>
+                            <option value="All">All Departments</option>
+                            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                    )}
                 </div>
 
                 <div className="table-responsive">
@@ -181,7 +196,7 @@ const ResultsAnalysis = () => {
                                     </td>
                                     <td style={{ padding: '1.25rem', fontSize: '0.85rem', color: '#475569' }}>
                                         {r.correctAnswers !== undefined
-                                            ? `${r.correctAnswers}✓ / ${r.wrongAnswers || 0}✗ (${r.totalQuestions || 0} Qs)`
+                                            ? `${r.correctAnswers}✓ / ${r.incorrectAnswers ?? r.wrongAnswers ?? 0}✗ (${r.totalQuestions || 0} Qs)`
                                             : `${r.correct || 0} / ${r.total || 0}`}
                                     </td>
                                     <td style={{ padding: '1.25rem' }}>
@@ -196,14 +211,14 @@ const ResultsAnalysis = () => {
                                     <td style={{ padding: '1.25rem', fontSize: '0.85rem' }}>
                                         <span style={{
                                             padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.78rem',
-                                            background: r.submissionReason === 'AUTO_SUBMIT_VIOLATIONS' ? '#fee2e2' :
-                                                r.submissionReason === 'TIMER_EXPIRED' ? '#fef3c7' : '#ecfdf5',
-                                            color: r.submissionReason === 'AUTO_SUBMIT_VIOLATIONS' ? '#991b1b' :
-                                                r.submissionReason === 'TIMER_EXPIRED' ? '#92400e' : '#065f46',
+                                            background: (r.submissionType === 'violation_limit_reached' || r.submissionReason === 'AUTO_SUBMIT_VIOLATIONS') ? '#fee2e2' :
+                                                (r.submissionType === 'time_expired' || r.submissionReason === 'TIMER_EXPIRED') ? '#fef3c7' : '#ecfdf5',
+                                            color: (r.submissionType === 'violation_limit_reached' || r.submissionReason === 'AUTO_SUBMIT_VIOLATIONS') ? '#991b1b' :
+                                                (r.submissionType === 'time_expired' || r.submissionReason === 'TIMER_EXPIRED') ? '#92400e' : '#065f46',
                                             fontWeight: 600
                                         }}>
-                                            {r.submissionReason === 'AUTO_SUBMIT_VIOLATIONS' ? 'Violations Exceeded' :
-                                                r.submissionReason === 'TIMER_EXPIRED' ? 'Time Expired' : 'User Submitted'}
+                                            {(r.submissionType === 'violation_limit_reached' || r.submissionReason === 'AUTO_SUBMIT_VIOLATIONS') ? 'Violations Exceeded' :
+                                                (r.submissionType === 'time_expired' || r.submissionReason === 'TIMER_EXPIRED') ? 'Time Expired' : 'User Submitted'}
                                         </span>
                                     </td>
                                     <td style={{ padding: '1.25rem' }}>

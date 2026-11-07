@@ -496,19 +496,8 @@ export const api = {
             throw e;
         }
     },
-    verifyAttendanceLocation: async (coords) => {
-        try {
-            const res = await fetchWithTimeout(`${getBaseUrl()}/api/attendance/verify-location`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(coords)
-            });
-            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-            return await res.json();
-        } catch (e) {
-            console.error("API VerifyAttendanceLocation Error:", e);
-            throw e;
-        }
+    verifyAttendanceLocation: async () => {
+        return { success: true, valid: true, message: 'GPS attendance check disabled.' };
     },
 
     // Attendance Records (Rich Geo Logs)

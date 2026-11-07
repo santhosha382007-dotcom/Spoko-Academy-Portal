@@ -24,6 +24,21 @@ const UsersList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 10;
 
+    // Active Tab State: 'students' | 'staff'
+    const [activeTab, setActiveTab] = useState('students');
+
+    // Add Staff Modal State
+    const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+    const [newStaff, setNewStaff] = useState({
+        staffId: '',
+        fullName: '',
+        phone: '',
+        email: '',
+        department: '',
+        password: 'staff@123'
+    });
+    const [isStaffSubmitting, setIsStaffSubmitting] = useState(false);
+
     // Add Student Modal State
     const [showAddModal, setShowAddModal] = useState(false);
     const [newStudent, setNewStudent] = useState({
@@ -483,6 +498,109 @@ const UsersList = () => {
         }
     };
 
+    const handleCreateStaff = async (e) => {
+        e.preventDefault();
+        const cleanPhone = newStaff.phone.trim();
+        const cleanName = newStaff.fullName.trim();
+        const cleanDept = newStaff.department || departments[0]?.name || 'Railway';
+        const cleanId = (newStaff.staffId || `staff_${cleanDept.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Date.now().toString().slice(-4)}`).trim();
+
+        if (!cleanName) {
+            alert("Please enter the staff member's full name.");
+            return;
+        }
+
+        if (cleanPhone.length !== 10) {
+            alert("Please enter a valid 10-digit mobile number.");
+            return;
+        }
+
+        if (!newStaff.password || newStaff.password.length < 6) {
+            alert("Password must be at least 6 characters.");
+            return;
+        }
+
+        setIsStaffSubmitting(true);
+        try {
+            const allUsers = await api.getUsers();
+            if (allUsers.some(u => String(u.phone).trim() === cleanPhone)) {
+                alert("A user already exists with this mobile number!");
+                setIsStaffSubmitting(false);
+                return;
+            }
+            if (allUsers.some(u => String(u.id).trim().toLowerCase() === cleanId.toLowerCase())) {
+                alert(`A user already exists with Staff ID "${cleanId}"!`);
+                setIsStaffSubmitting(false);
+                return;
+            }
+
+            const hashedPassword = hashPassword(newStaff.password);
+
+            const createdStaff = {
+                id: cleanId,
+                name: cleanName,
+                phone: cleanPhone,
+                email: newStaff.email.trim() || `${cleanId}@spoko.edu`,
+                department: cleanDept,
+                password: hashedPassword,
+                role: 'staff',
+                status: 'active',
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=7c3aed&color=fff`,
+                details: {
+                    staffId: cleanId,
+                    fullName: cleanName,
+                    phone: cleanPhone,
+                    email: newStaff.email.trim() || `${cleanId}@spoko.edu`,
+                    department: cleanDept,
+                    title: `${cleanDept} Department Faculty`,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await api.createUser(createdStaff);
+
+            await api.createAuditLog({
+                eventType: 'STAFF_CREATED',
+                performedBy: currentUser?.name || 'Administrator',
+                userId: cleanId,
+                details: `Admin created department staff "${cleanName}" (${cleanId}) for ${cleanDept} department.`
+            });
+
+            alert(`Staff account "${cleanName}" created successfully for ${cleanDept} Department with password: ${newStaff.password}`);
+            setShowAddStaffModal(false);
+            setNewStaff({
+                staffId: '',
+                fullName: '',
+                phone: '',
+                email: '',
+                department: departments[0]?.name || 'Railway',
+                password: 'staff@123'
+            });
+            await refreshData();
+        } catch (err) {
+            console.error("Staff creation error:", err);
+            alert("Failed to create staff account.");
+        } finally {
+            setIsStaffSubmitting(false);
+        }
+    };
+
+    const handleDeleteStaff = async (staffMember) => {
+        if (!confirm(`Are you sure you want to remove staff member "${staffMember.name}" (${staffMember.department})?`)) return;
+        try {
+            await api.deleteUser(staffMember.id);
+            await api.createAuditLog({
+                eventType: 'STAFF_DELETED',
+                performedBy: currentUser?.name || 'Administrator',
+                userId: staffMember.id,
+                details: `Admin deleted staff member "${staffMember.name}" from ${staffMember.department} department.`
+            });
+            await refreshData();
+        } catch (err) {
+            alert("Failed to delete staff member.");
+        }
+    };
+
     // -------------------------------------------------------------
     // Admin Password Reset Action
     // -------------------------------------------------------------
@@ -607,10 +725,30 @@ const UsersList = () => {
         return matchesSearch && matchesDept && matchesStatus;
     });
 
+    const filteredStaff = users.filter(u => {
+        if (u.role !== 'staff') return false;
+
+        const matchesSearch =
+            (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            String(u.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            String(u.phone || '').includes(searchTerm) ||
+            String(u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            String(u.department || u.details?.department || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+        const sDept = u.department || u.details?.department;
+        const matchesDept = filterDept === 'All' || sDept === filterDept;
+        const matchesStatus = filterStatus === 'All' || (u.status || 'active').toLowerCase() === filterStatus.toLowerCase();
+
+        return matchesSearch && matchesDept && matchesStatus;
+    });
+
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
     const totalPages = Math.ceil(filteredUsers.length / usersPerPage) || 1;
+
+    const currentStaff = filteredStaff.slice(indexOfFirstUser, indexOfLastUser);
+    const staffTotalPages = Math.ceil(filteredStaff.length / usersPerPage) || 1;
 
     const validRowsCount = parsedRows.filter(r => r.isValid && (!r.isConflict || allowOverwrite)).length;
     const errorRowsCount = parsedRows.filter(r => !r.isValid).length;
@@ -619,46 +757,111 @@ const UsersList = () => {
     return (
         <div style={{ paddingBottom: '3rem' }}>
             {/* Header */}
-            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <Link to="/" className="btn-icon" style={{ background: 'white', border: '1px solid var(--color-border)' }}>
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>Student Management</h1>
+                        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>
+                            {activeTab === 'students' ? 'Student Management' : 'Department Staff Management'}
+                        </h1>
                         <p style={{ margin: '0.25rem 0 0', color: '#64748b', fontSize: '0.88rem' }}>
-                            Single creation, Excel bulk onboarding, password administration, and departmental assignments.
+                            {activeTab === 'students' 
+                                ? 'Single creation, Excel bulk onboarding, password administration, and departmental assignments.' 
+                                : 'Manage department faculty logins, credentials, and departmental question bank access.'}
                         </p>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {isAdmin && (
+                    {isAdmin && activeTab === 'students' && (
+                        <>
+                            <button
+                                onClick={() => {
+                                    setNewStudent(prev => ({
+                                        ...prev,
+                                        password: generateTemporaryPassword(),
+                                        department: departments[0]?.name || ''
+                                    }));
+                                    setShowAddModal(true);
+                                }}
+                                className="btn btn-primary btn-sm"
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#7c3aed', color: 'white', fontWeight: 700 }}
+                            >
+                                <UserPlus size={16} /> Add Student
+                            </button>
+                            <button onClick={downloadOfficialTemplate} className="btn btn-outline btn-sm" title="Download Excel template with 3 sheets" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Download size={14} /> Excel Template
+                            </button>
+                            <button onClick={exportToExcel} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Download size={14} /> Export Students
+                            </button>
+                        </>
+                    )}
+
+                    {isAdmin && activeTab === 'staff' && (
                         <button
                             onClick={() => {
-                                setNewStudent(prev => ({
+                                setNewStaff(prev => ({
                                     ...prev,
-                                    password: generateTemporaryPassword(),
-                                    department: departments[0]?.name || ''
+                                    department: departments[0]?.name || 'Railway',
+                                    password: 'staff@123'
                                 }));
-                                setShowAddModal(true);
+                                setShowAddStaffModal(true);
                             }}
                             className="btn btn-primary btn-sm"
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#7c3aed', color: 'white', fontWeight: 700 }}
                         >
-                            <UserPlus size={16} /> Add Student
+                            <UserPlus size={16} /> Add Department Staff
                         </button>
                     )}
-                    <button onClick={downloadOfficialTemplate} className="btn btn-outline btn-sm" title="Download Excel template with 3 sheets" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Download size={14} /> Excel Template
-                    </button>
-                    <button onClick={exportToExcel} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Download size={14} /> Export Students
-                    </button>
                 </div>
             </div>
 
-            {/* Dropzone Banner for Bulk Import */}
-            {isAdmin && (
+            {/* Tabs for Students vs Department Staff */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                <button
+                    onClick={() => { setActiveTab('students'); setCurrentPage(1); }}
+                    style={{
+                        padding: '0.6rem 1.25rem',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        fontSize: '0.92rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        border: 'none',
+                        background: activeTab === 'students' ? '#7c3aed' : '#f1f5f9',
+                        color: activeTab === 'students' ? 'white' : '#475569',
+                        transition: 'all 0.15s ease'
+                    }}
+                >
+                    <Users size={17} /> Students ({users.filter(u => u.role === 'student').length})
+                </button>
+                <button
+                    onClick={() => { setActiveTab('staff'); setCurrentPage(1); }}
+                    style={{
+                        padding: '0.6rem 1.25rem',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        fontSize: '0.92rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        border: 'none',
+                        background: activeTab === 'staff' ? '#7c3aed' : '#f1f5f9',
+                        color: activeTab === 'staff' ? 'white' : '#475569',
+                        transition: 'all 0.15s ease'
+                    }}
+                >
+                    <UserCheck size={17} /> Department Staff ({users.filter(u => u.role === 'staff').length})
+                </button>
+            </div>
+
+            {/* Dropzone Banner for Bulk Import (Students Tab Only) */}
+            {isAdmin && activeTab === 'students' && (
                 <div
                     {...getRootProps()}
                     style={{
@@ -740,127 +943,220 @@ const UsersList = () => {
             </div>
 
             {/* Students Table */}
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>Student Details</th>
-                            <th>Department & Batch</th>
-                            <th>First-Login Password</th>
-                            <th>Account Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading ? (
-                            <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem' }}><Loader className="spin" /> Loading students...</td></tr>
-                        ) : currentUsers.length === 0 ? (
-                            <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No students found matching filters.</td></tr>
-                        ) : currentUsers.map(student => (
-                            <tr key={student.id}>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <div className="avatar-sm" style={{ background: '#7c3aed', color: 'white', fontWeight: 700 }}>
-                                            {student.name?.[0]?.toUpperCase() || 'S'}
-                                        </div>
-                                        <div>
-                                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{student.name}</div>
-                                            <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: '0.5rem' }}>
-                                                <span>ID: <strong>{student.id}</strong></span>
-                                                <span>•</span>
-                                                <span>📱 {student.phone}</span>
+            {activeTab === 'students' && (
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th>Student Details</th>
+                                <th>Department & Batch</th>
+                                <th>First-Login Password</th>
+                                <th>Account Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {isLoading ? (
+                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem' }}><Loader className="spin" /> Loading students...</td></tr>
+                            ) : currentUsers.length === 0 ? (
+                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No students found matching filters.</td></tr>
+                            ) : currentUsers.map(student => (
+                                <tr key={student.id}>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div className="avatar-sm" style={{ background: '#7c3aed', color: 'white', fontWeight: 700 }}>
+                                                {student.name?.[0]?.toUpperCase() || 'S'}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: '#0f172a' }}>{student.name}</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: '0.5rem' }}>
+                                                    <span>ID: <strong>{student.id}</strong></span>
+                                                    <span>•</span>
+                                                    <span>📱 {student.phone}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div style={{ fontWeight: 600 }}>{student.details?.department || 'Unassigned'}</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Batch: {student.details?.batch || '-'}</div>
-                                </td>
-                                <td>
-                                    {student.firstLoginPasswordChange ? (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fffbeb', color: '#b45309', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #fde68a' }}>
-                                            <AlertTriangle size={12} /> Must Change Pass
+                                    </td>
+                                    <td>
+                                        <div style={{ fontWeight: 600 }}>{student.details?.department || 'Unassigned'}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Batch: {student.details?.batch || '-'}</div>
+                                    </td>
+                                    <td>
+                                        {student.firstLoginPasswordChange ? (
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fffbeb', color: '#b45309', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #fde68a' }}>
+                                                <AlertTriangle size={12} /> Must Change Pass
+                                            </span>
+                                        ) : (
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#ecfdf5', color: '#047857', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #a7f3d0' }}>
+                                                <CheckCircle size={12} /> Changed / Secure
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <span className={`status-dot ${student.status || 'active'}`}></span>
+                                        <span style={{ textTransform: 'capitalize', fontWeight: 600, fontSize: '0.85rem' }}>
+                                            {student.status || 'active'}
                                         </span>
-                                    ) : (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#ecfdf5', color: '#047857', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #a7f3d0' }}>
-                                            <CheckCircle size={12} /> Changed / Secure
-                                        </span>
-                                    )}
-                                </td>
-                                <td>
-                                    <span className={`status-dot ${student.status || 'active'}`}></span>
-                                    <span style={{ textTransform: 'capitalize', fontWeight: 600, fontSize: '0.85rem' }}>
-                                        {student.status || 'active'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                                        <button
-                                            onClick={() => initiatePasswordReset(student)}
-                                            className="btn-icon-sm"
-                                            title="Reset Password & Force First-Login Change"
-                                            style={{ color: '#7c3aed', background: '#f5f3ff' }}
-                                        >
-                                            <KeyRound size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => setEditingStudent({
-                                                id: student.id,
-                                                name: student.name,
-                                                phone: student.phone,
-                                                email: student.details?.email || '',
-                                                department: student.details?.department || departments[0]?.name || '',
-                                                batch: student.details?.batch || '2026-A',
-                                                status: student.status || 'active',
-                                                details: student.details || {}
-                                            })}
-                                            className="btn-icon-sm"
-                                            title="Edit Student Profile"
-                                            style={{ color: '#2563eb', background: '#eff6ff' }}
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        <Link
-                                            to={`/admin/reports/${student.id}`}
-                                            className="btn-icon-sm"
-                                            title="View Student Report"
-                                            style={{ color: '#059669', background: '#ecfdf5' }}
-                                        >
-                                            <FileText size={16} />
-                                        </Link>
-                                        <button
-                                            onClick={() => handleToggleStatus(student)}
-                                            className="btn-icon-sm"
-                                            title={student.status === 'blocked' ? "Activate Student" : "Deactivate Student"}
-                                            style={{ color: student.status === 'blocked' ? '#10b981' : '#f59e0b', background: '#fffbeb' }}
-                                        >
-                                            <Ban size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(student.id, student.name)}
-                                            className="btn-icon-sm"
-                                            title="Delete Account"
-                                            style={{ color: '#ef4444', background: '#fef2f2' }}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </td>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                            <button
+                                                onClick={() => initiatePasswordReset(student)}
+                                                className="btn-icon-sm"
+                                                title="Reset Password & Force First-Login Change"
+                                                style={{ color: '#7c3aed', background: '#f5f3ff' }}
+                                            >
+                                                <KeyRound size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingStudent({
+                                                    id: student.id,
+                                                    name: student.name,
+                                                    phone: student.phone,
+                                                    email: student.details?.email || '',
+                                                    department: student.details?.department || departments[0]?.name || '',
+                                                    batch: student.details?.batch || '2026-A',
+                                                    status: student.status || 'active',
+                                                    details: student.details || {}
+                                                })}
+                                                className="btn-icon-sm"
+                                                title="Edit Student Profile"
+                                                style={{ color: '#2563eb', background: '#eff6ff' }}
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <Link
+                                                to={`/admin/reports/${student.id}`}
+                                                className="btn-icon-sm"
+                                                title="View Student Report"
+                                                style={{ color: '#059669', background: '#ecfdf5' }}
+                                            >
+                                                <FileText size={16} />
+                                            </Link>
+                                            <button
+                                                onClick={() => handleToggleStatus(student)}
+                                                className="btn-icon-sm"
+                                                title={student.status === 'blocked' ? "Activate Student" : "Deactivate Student"}
+                                                style={{ color: student.status === 'blocked' ? '#10b981' : '#f59e0b', background: '#fffbeb' }}
+                                            >
+                                                <Ban size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(student.id, student.name)}
+                                                className="btn-icon-sm"
+                                                title="Delete Account"
+                                                style={{ color: '#ef4444', background: '#fef2f2' }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* Department Staff Table */}
+            {activeTab === 'staff' && (
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th>Staff Member</th>
+                                <th>Assigned Department</th>
+                                <th>Login Credentials (ID / Phone)</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {isLoading ? (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem' }}><Loader className="spin" /> Loading staff accounts...</td></tr>
+                            ) : currentStaff.length === 0 ? (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No department staff accounts found matching filters.</td></tr>
+                            ) : currentStaff.map(staff => (
+                                <tr key={staff.id}>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <img
+                                                src={staff.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name || 'Staff')}&background=7c3aed&color=fff`}
+                                                alt={staff.name}
+                                                style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
+                                            />
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: '#0f172a' }}>{staff.name}</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                                    Role: <strong>Faculty / Staff</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className="badge badge-primary" style={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                                            {staff.department || staff.details?.department || 'General'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style={{ fontWeight: 700, color: '#334155' }}>ID: {staff.id}</div>
+                                        <div style={{ fontSize: '0.78rem', color: '#64748b' }}>📱 {staff.phone}</div>
+                                    </td>
+                                    <td>
+                                        <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                                            {staff.email || staff.details?.email || '—'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span className={`status-dot ${(staff.status || 'active').toLowerCase()}`}></span>
+                                        <span style={{ textTransform: 'capitalize', fontWeight: 600, fontSize: '0.85rem' }}>
+                                            {staff.status || 'active'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                            <button
+                                                onClick={() => initiatePasswordReset(staff)}
+                                                className="btn-icon-sm"
+                                                title="Reset Staff Password"
+                                                style={{ color: '#7c3aed', background: '#f5f3ff' }}
+                                            >
+                                                <KeyRound size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggleStatus(staff)}
+                                                className="btn-icon-sm"
+                                                title={staff.status === 'blocked' ? "Activate Staff" : "Deactivate Staff"}
+                                                style={{ color: staff.status === 'blocked' ? '#10b981' : '#f59e0b', background: '#fffbeb' }}
+                                            >
+                                                <Ban size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteStaff(staff)}
+                                                className="btn-icon-sm"
+                                                title="Delete Staff Account"
+                                                style={{ color: '#ef4444', background: '#fef2f2' }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {/* Pagination */}
-            {totalPages > 1 && (
+            {((activeTab === 'students' ? totalPages : staffTotalPages) > 1) && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="btn btn-outline btn-sm">Prev</button>
-                    {[...Array(totalPages)].map((_, i) => (
+                    {[...Array(activeTab === 'students' ? totalPages : staffTotalPages)].map((_, i) => (
                         <button key={i} onClick={() => setCurrentPage(i + 1)} className={`btn btn-sm ${currentPage === i + 1 ? 'btn-primary' : 'btn-outline'}`}>{i + 1}</button>
                     ))}
-                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="btn btn-outline btn-sm">Next</button>
+                    <button disabled={currentPage === (activeTab === 'students' ? totalPages : staffTotalPages)} onClick={() => setCurrentPage(p => p + 1)} className="btn btn-outline btn-sm">Next</button>
                 </div>
             )}
 
@@ -995,6 +1291,143 @@ const UsersList = () => {
                                 </button>
                                 <button type="submit" className="btn btn-primary" style={{ flex: 1, background: '#7c3aed' }} disabled={isSubmitting}>
                                     {isSubmitting ? 'Creating...' : 'Create Student'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* Modal: Add Department Staff (Section: Staff Management)       */}
+            {/* ------------------------------------------------------------- */}
+            {showAddStaffModal && (
+                <div className="modal-overlay animate-fade-in" style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                    backdropFilter: 'blur(4px)', padding: '1rem'
+                }}>
+                    <div style={{
+                        width: '100%', maxWidth: '520px', padding: '2rem',
+                        borderRadius: '24px', background: '#fff', boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                        maxHeight: '90vh', overflowY: 'auto'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ background: '#f5f3ff', color: '#7c3aed', padding: '8px', borderRadius: '10px' }}>
+                                    <UserCheck size={22} />
+                                </div>
+                                <div>
+                                    <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800 }}>Create Department Staff</h2>
+                                    <p style={{ margin: '0.2rem 0 0', color: '#64748b', fontSize: '0.8rem' }}>Faculty login with isolated department view & question import</p>
+                                </div>
+                            </div>
+                            <button type="button" onClick={() => setShowAddStaffModal(false)} style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', padding: '8px', cursor: 'pointer' }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateStaff} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Assigned Department *</label>
+                                <select
+                                    required
+                                    value={newStaff.department}
+                                    onChange={(e) => {
+                                        const dept = e.target.value;
+                                        setNewStaff(prev => ({
+                                            ...prev,
+                                            department: dept,
+                                            staffId: prev.staffId ? prev.staffId : `staff_${dept.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+                                        }));
+                                    }}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }}
+                                >
+                                    {departments.map(d => (
+                                        <option key={d.id} value={d.name}>{d.name} ({d.code || 'Dept'})</option>
+                                    ))}
+                                    {departments.length === 0 && (
+                                        <>
+                                            <option value="Railway">Railway</option>
+                                            <option value="SSC">SSC</option>
+                                            <option value="GD">GD</option>
+                                            <option value="TNPSC">TNPSC</option>
+                                            <option value="TNUSRB">TNUSRB</option>
+                                        </>
+                                    )}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Staff Full Name *</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Railway Staff / Faculty In-Charge"
+                                    required
+                                    value={newStaff.fullName}
+                                    onChange={(e) => setNewStaff({ ...newStaff, fullName: e.target.value })}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Staff ID / Username *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. staff_railway"
+                                        required
+                                        value={newStaff.staffId}
+                                        onChange={(e) => setNewStaff({ ...newStaff, staffId: e.target.value })}
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Mobile Number * (10 Digits)</label>
+                                    <input
+                                        type="tel"
+                                        maxLength={10}
+                                        placeholder="e.g. 9800100001"
+                                        required
+                                        value={newStaff.phone}
+                                        onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value.replace(/\D/g, '') })}
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Email Address (Optional)</label>
+                                <input
+                                    type="email"
+                                    placeholder="e.g. railway.staff@spoko.edu"
+                                    value={newStaff.email}
+                                    onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Default Password *</label>
+                                <input
+                                    type="text"
+                                    placeholder="staff@123"
+                                    required
+                                    value={newStaff.password}
+                                    onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', outline: 'none', fontFamily: 'monospace', fontWeight: 600 }}
+                                />
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.3rem' }}>
+                                    Staff can log in with Staff ID, Phone, or Email, plus this default password.
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                                <button type="button" onClick={() => setShowAddStaffModal(false)} className="btn btn-outline" style={{ flex: 1 }}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary" style={{ flex: 1, background: '#7c3aed' }} disabled={isStaffSubmitting}>
+                                    {isStaffSubmitting ? 'Creating...' : 'Create Staff Login'}
                                 </button>
                             </div>
                         </form>

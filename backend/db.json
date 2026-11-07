@@ -34,6 +34,81 @@
         "passwordChangedAt": "2026-10-05T16:39:14.108Z"
       },
       "passwordChangedAt": "2026-10-05T16:39:14.108Z"
+    },
+    {
+      "id": "staff_railway",
+      "name": "Railway Staff",
+      "phone": "9800100001",
+      "email": "railway.staff@spoko.edu",
+      "role": "staff",
+      "department": "Railway",
+      "status": "active",
+      "password": "$2b$10$rnkkZbjQLhDVF3Ks3EuJ0evy6d8HIZAUqY7PLD7X7/NMuyIemqORu",
+      "avatar": "https://ui-avatars.com/api/?name=Railway+Staff&background=0284c7&color=fff",
+      "details": {
+        "department": "Railway",
+        "title": "Department Faculty / Staff"
+      }
+    },
+    {
+      "id": "staff_ssc",
+      "name": "SSC Staff",
+      "phone": "9800100002",
+      "email": "ssc.staff@spoko.edu",
+      "role": "staff",
+      "department": "SSC",
+      "status": "active",
+      "password": "$2b$10$rnkkZbjQLhDVF3Ks3EuJ0evy6d8HIZAUqY7PLD7X7/NMuyIemqORu",
+      "avatar": "https://ui-avatars.com/api/?name=SSC+Staff&background=7c3aed&color=fff",
+      "details": {
+        "department": "SSC",
+        "title": "Department Faculty / Staff"
+      }
+    },
+    {
+      "id": "staff_gd",
+      "name": "GD Staff",
+      "phone": "9800100003",
+      "email": "gd.staff@spoko.edu",
+      "role": "staff",
+      "department": "GD",
+      "status": "active",
+      "password": "$2b$10$rnkkZbjQLhDVF3Ks3EuJ0evy6d8HIZAUqY7PLD7X7/NMuyIemqORu",
+      "avatar": "https://ui-avatars.com/api/?name=GD+Staff&background=059669&color=fff",
+      "details": {
+        "department": "GD",
+        "title": "Department Faculty / Staff"
+      }
+    },
+    {
+      "id": "staff_tnpsc",
+      "name": "TNPSC Staff",
+      "phone": "9800100004",
+      "email": "tnpsc.staff@spoko.edu",
+      "role": "staff",
+      "department": "TNPSC",
+      "status": "active",
+      "password": "$2b$10$rnkkZbjQLhDVF3Ks3EuJ0evy6d8HIZAUqY7PLD7X7/NMuyIemqORu",
+      "avatar": "https://ui-avatars.com/api/?name=TNPSC+Staff&background=ea580c&color=fff",
+      "details": {
+        "department": "TNPSC",
+        "title": "Department Faculty / Staff"
+      }
+    },
+    {
+      "id": "staff_tnusrb",
+      "name": "TNUSRB Staff",
+      "phone": "9800100005",
+      "email": "tnusrb.staff@spoko.edu",
+      "role": "staff",
+      "department": "TNUSRB",
+      "status": "active",
+      "password": "$2b$10$rnkkZbjQLhDVF3Ks3EuJ0evy6d8HIZAUqY7PLD7X7/NMuyIemqORu",
+      "avatar": "https://ui-avatars.com/api/?name=TNUSRB+Staff&background=dc2626&color=fff",
+      "details": {
+        "department": "TNUSRB",
+        "title": "Department Faculty / Staff"
+      }
     }
   ],
   "exams": [

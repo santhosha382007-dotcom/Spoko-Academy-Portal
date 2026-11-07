@@ -16,14 +16,23 @@ const PDFImport = () => {
     const { user: currentUser } = useAuth();
     const navigate = useNavigate();
 
+    const isStaff = currentUser?.role === 'staff';
+    const staffDept = currentUser?.department || currentUser?.details?.department || 'General';
+
     // Stages: 'upload' | 'review' | 'success'
     const [stage, setStage] = useState('upload');
     const [fileName, setFileName] = useState('');
     const [isExtracting, setIsExtracting] = useState(false);
     const [extractedQuestions, setExtractedQuestions] = useState([]);
-    const [selectedDepartment, setSelectedDepartment] = useState('General');
+    const [selectedDepartment, setSelectedDepartment] = useState(() => isStaff ? staffDept : 'General');
     const [isSaving, setIsSaving] = useState(false);
     const [savedCount, setSavedCount] = useState(0);
+
+    React.useEffect(() => {
+        if (isStaff && staffDept) {
+            setSelectedDepartment(staffDept);
+        }
+    }, [isStaff, staffDept]);
 
     // -------------------------------------------------------------
     // Smart Question Parser from Extracted PDF Text
@@ -273,7 +282,7 @@ const PDFImport = () => {
             {/* Header */}
             <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <Link to="/admin/questions" className="btn-icon" style={{ background: 'white', border: '1px solid var(--color-border)' }}>
+                    <Link to={isStaff ? "/staff/questions" : "/admin/questions"} className="btn-icon" style={{ background: 'white', border: '1px solid var(--color-border)' }}>
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
@@ -353,18 +362,24 @@ const PDFImport = () => {
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569' }}>Target Department:</label>
-                                <select
-                                    value={selectedDepartment}
-                                    onChange={(e) => setSelectedDepartment(e.target.value)}
-                                    style={{ padding: '0.45rem 0.75rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}
-                                >
-                                    <option value="General">General / All</option>
-                                    <option value="Railway">Railway</option>
-                                    <option value="SSC">SSC</option>
-                                    <option value="GD">GD</option>
-                                    <option value="Department 4">Department 4</option>
-                                    <option value="Department 5">Department 5</option>
-                                </select>
+                                {isStaff ? (
+                                    <span className="badge badge-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.85rem', fontWeight: 700 }}>
+                                        {staffDept} (Department Locked)
+                                    </span>
+                                ) : (
+                                    <select
+                                        value={selectedDepartment}
+                                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                                        style={{ padding: '0.45rem 0.75rem', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}
+                                    >
+                                        <option value="General">General / All</option>
+                                        <option value="Railway">Railway</option>
+                                        <option value="SSC">SSC</option>
+                                        <option value="GD">GD</option>
+                                        <option value="TNPSC">TNPSC</option>
+                                        <option value="TNUSRB">TNUSRB</option>
+                                    </select>
+                                )}
                             </div>
 
                             <button onClick={handleAddManualQuestion} className="btn btn-outline btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -517,7 +532,7 @@ const PDFImport = () => {
                             Import Another PDF
                         </button>
                         <Link
-                            to="/admin/questions"
+                            to={isStaff ? "/staff/questions" : "/admin/questions"}
                             className="btn btn-primary"
                             style={{ flex: 1, background: '#7c3aed', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >

@@ -34,6 +34,9 @@ import ExamTaker from './pages/student/ExamTaker';
 import StudentResults from './pages/student/StudentResults';
 import AIAssistant from './pages/student/AIAssistant';
 
+// Staff Pages
+import DepartmentStudents from './pages/staff/DepartmentStudents';
+
 // Protected Route Component (ADMIN and STUDENT roles only)
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user } = useAuth();
@@ -62,7 +65,7 @@ function App() {
                 */}
                 <Route path="/" element={
                     user ? (
-                        <ProtectedRoute allowedRoles={['admin', 'student']}>
+                        <ProtectedRoute allowedRoles={['admin', 'student', 'staff']}>
                             <Dashboard />
                         </ProtectedRoute>
                     ) : (
@@ -116,17 +119,17 @@ function App() {
                     </ProtectedRoute>
                 } />
                 <Route path="/admin/questions" element={
-                    <ProtectedRoute allowedRoles={['admin']}>
+                    <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <QuestionBank />
                     </ProtectedRoute>
                 } />
                 <Route path="/admin/pdf-import" element={
-                    <ProtectedRoute allowedRoles={['admin']}>
+                    <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <PDFImport />
                     </ProtectedRoute>
                 } />
                 <Route path="/admin/results" element={
-                    <ProtectedRoute allowedRoles={['admin']}>
+                    <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <ResultsAnalysis />
                     </ProtectedRoute>
                 } />
@@ -136,7 +139,7 @@ function App() {
                     </ProtectedRoute>
                 } />
                 <Route path="/admin/reports/:userId" element={
-                    <ProtectedRoute allowedRoles={['admin']}>
+                    <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <StudentReport />
                     </ProtectedRoute>
                 } />
@@ -185,14 +188,38 @@ function App() {
                     </ProtectedRoute>
                 } />
 
+                {/* ------------------------------------------------------------- */}
+                {/* STAFF ROUTES (Department Faculty with isolated department)    */}
+                {/* ------------------------------------------------------------- */}
+                <Route path="/staff/students" element={
+                    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                        <DepartmentStudents />
+                    </ProtectedRoute>
+                } />
+                <Route path="/staff/import-questions" element={
+                    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                        <PDFImport />
+                    </ProtectedRoute>
+                } />
+                <Route path="/staff/questions" element={
+                    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                        <QuestionBank />
+                    </ProtectedRoute>
+                } />
+                <Route path="/staff/results" element={
+                    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                        <ResultsAnalysis />
+                    </ProtectedRoute>
+                } />
+
                 {/* Shared authenticated routes */}
                 <Route path="/settings" element={
-                    <ProtectedRoute allowedRoles={['student', 'admin']}>
+                    <ProtectedRoute allowedRoles={['student', 'admin', 'staff']}>
                         <ProfileSettings />
                     </ProtectedRoute>
                 } />
                 <Route path="/schedule" element={
-                    <ProtectedRoute allowedRoles={['student', 'admin']}>
+                    <ProtectedRoute allowedRoles={['student', 'admin', 'staff']}>
                         <Schedule />
                     </ProtectedRoute>
                 } />

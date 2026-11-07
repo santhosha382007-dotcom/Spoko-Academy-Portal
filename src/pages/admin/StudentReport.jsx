@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Mail, Phone, Calendar, BookOpen, Award, BarChart2, TrendingUp, Clock, GraduationCap } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const StudentReport = () => {
     const { userId } = useParams();
+    const navigate = useNavigate();
+    const { user: currentUser } = useAuth();
     const [student, setStudent] = useState(null);
     const [results, setResults] = useState([]);
     const [attendance, setAttendance] = useState([]);
@@ -65,7 +68,7 @@ const StudentReport = () => {
         <div className="report-container animate-fade-in" style={{ paddingBottom: '3rem' }}>
             {/* Header */}
             <header style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                <Link to="/admin/users" className="btn-icon" style={{ background: 'white' }}>
+                <Link to={currentUser?.role === 'staff' ? '/staff/students' : '/admin/users'} className="btn-icon" style={{ background: 'white' }}>
                     <ArrowLeft size={20} />
                 </Link>
                 <div>
