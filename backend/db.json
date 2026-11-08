@@ -36,6 +36,21 @@
       "passwordChangedAt": "2026-10-05T16:39:14.108Z"
     },
     {
+      "id": "staff",
+      "name": "Staff Faculty",
+      "phone": "staff",
+      "email": "staff@spoko.edu",
+      "role": "staff",
+      "department": "Railway",
+      "status": "active",
+      "password": "$2b$10$rnkkZbjQLhDVF3Ks3EuJ0evy6d8HIZAUqY7PLD7X7/NMuyIemqORu",
+      "avatar": "https://ui-avatars.com/api/?name=Staff+Faculty&background=7c3aed&color=fff",
+      "details": {
+        "department": "Railway",
+        "title": "Department Faculty / Staff"
+      }
+    },
+    {
       "id": "staff_railway",
       "name": "Railway Staff",
       "phone": "9800100001",

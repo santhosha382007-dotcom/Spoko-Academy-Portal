@@ -4,7 +4,7 @@ import {
     LogOut, LayoutDashboard, PlusCircle, CheckCircle, Menu, X, Users, Calendar, 
     TrendingUp, BarChart2, Bell, Settings, ClipboardList,
     Building2, FileUp, CalendarCheck, ShieldCheck, History, Award, User as UserIcon,
-    ChevronRight, ChevronLeft, Wifi
+    ChevronRight, ChevronLeft, Wifi, BookOpen
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';

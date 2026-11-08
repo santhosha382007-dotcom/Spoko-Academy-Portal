@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { 
     ArrowLeft, Search, Shield, Trash2, Ban, Loader, FileText, Download, 
     Upload, Filter, Edit, UserPlus, X, KeyRound, CheckCircle, AlertTriangle, 
-    RefreshCw, Check, AlertCircle, Eye, EyeOff, UserCheck
+    RefreshCw, Check, AlertCircle, Eye, EyeOff, UserCheck, Users
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';

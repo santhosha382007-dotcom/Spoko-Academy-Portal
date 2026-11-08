@@ -973,9 +973,11 @@ const StaffView = ({ user, users = [], exams = [], results = [], departments = [
         : 0;
 
     const myAnnouncements = (announcements || []).filter(a =>
-        a.target === 'all' ||
-        a.target === 'staff' ||
-        a.department === myDept
+        a && (
+            a.target === 'all' ||
+            a.target === 'staff' ||
+            String(a.department || '').toLowerCase() === String(myDept || '').toLowerCase()
+        )
     );
 
     return (

@@ -88,7 +88,7 @@ const DepartmentDetails = () => {
             {/* Header */}
             <header style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                    <Link to="/" className="btn-icon" style={{ background: 'white' }}>
+                    <Link to="/admin/departments" className="btn-icon" style={{ background: 'white' }}>
                         <ArrowLeft size={20} />
                     </Link>
                     <div>

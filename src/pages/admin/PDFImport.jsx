@@ -175,7 +175,7 @@ const PDFImport = () => {
         }
     };
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop: (acceptedFiles) => {
             if (acceptedFiles.length > 0) {
                 handlePdfFile(acceptedFiles[0]);
@@ -323,7 +323,13 @@ const PDFImport = () => {
                             Drag and drop your examination PDF here, or click to browse. The system will extract text, parse MCQs, and load them into the verification stage.
                         </p>
 
-                        <button type="button" className="btn btn-primary" style={{ background: '#7c3aed', padding: '0.75rem 2rem', fontWeight: 700 }} disabled={isExtracting}>
+                        <button 
+                            type="button" 
+                            onClick={open} 
+                            className="btn btn-primary" 
+                            style={{ background: '#7c3aed', padding: '0.75rem 2rem', fontWeight: 700 }} 
+                            disabled={isExtracting}
+                        >
                             {isExtracting ? 'Processing Pages...' : 'Select PDF File'}
                         </button>
                     </div>

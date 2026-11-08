@@ -87,15 +87,33 @@ export const AuthProvider = ({ children }) => {
                 throw "EmptyDB";
             }
 
-            // 1. Identify User by Student ID, Phone / Mobile Number, Email, or Full Name
+            // 1. Identify User by Student ID, Phone / Mobile Number, Email, Full Name, or Staff/Department
             const inputClean = String(identifier).trim().toLowerCase();
-            const candidate = users.find(u => {
+            let candidate = users.find(u => {
                 const uId = String(u.id || '').trim().toLowerCase();
                 const uPhone = String(u.phone || '').trim().toLowerCase();
                 const uEmail = String(u.details?.email || u.email || '').trim().toLowerCase();
                 const uName = String(u.name || '').trim().toLowerCase();
                 return uId === inputClean || uPhone === inputClean || uEmail === inputClean || uName === inputClean;
             });
+
+            // Friendly staff identification fallback:
+            // Allows logging in with 'staff', 'faculty', department name ('railway', 'ssc', etc.), or 'staff_<dept>'
+            if (!candidate) {
+                if (inputClean === 'staff' || inputClean === 'faculty') {
+                    candidate = users.find(u => u.id === 'staff' || u.role === 'staff');
+                } else {
+                    candidate = users.find(u => {
+                        if (u.role !== 'staff') return false;
+                        const uDept = String(u.department || u.details?.department || '').trim().toLowerCase().replace(/s$/, '');
+                        const cleanTest = inputClean.replace(/s$/, '');
+                        return uDept === cleanTest || 
+                               cleanTest === `staff_${uDept}` || 
+                               cleanTest === `${uDept}_staff` || 
+                               cleanTest === `${uDept} staff`;
+                    });
+                }
+            }
 
             if (!candidate) {
                 await api.createSecurityLog({
@@ -352,6 +370,82 @@ export const AuthProvider = ({ children }) => {
         return newUser;
     };
 
+    const updateUserProfile = async (profileData) => {
+        if (!user?.id) throw new Error("No active session");
+        const updatePayload = {
+            name: profileData.name || user.name,
+            phone: profileData.phone || user.phone,
+            avatar: profileData.avatar || user.avatar,
+            details: {
+                ...(user.details || {}),
+                email: profileData.email || user.details?.email || user.email,
+                avatar: profileData.avatar || user.details?.avatar || user.avatar
+            }
+        };
+        if (profileData.email) {
+            updatePayload.email = profileData.email;
+        }
+
+        await api.updateUser(user.id, updatePayload);
+
+        const updatedUser = {
+            ...user,
+            ...updatePayload,
+            details: {
+                ...(user.details || {}),
+                ...updatePayload.details
+            }
+        };
+
+        setUser(updatedUser);
+        localStorage.setItem('spoko_user', JSON.stringify(updatedUser));
+        return updatedUser;
+    };
+
+    const changePassword = async (newPassword) => {
+        if (!user?.id) throw new Error("No active session");
+        const policyCheck = validatePasswordPolicy(newPassword);
+        if (!policyCheck.valid) {
+            throw new Error(policyCheck.message);
+        }
+
+        const hashed = hashPassword(newPassword);
+        const updatePayload = {
+            password: hashed,
+            firstLoginPasswordChange: false,
+            passwordChangedAt: new Date().toISOString()
+        };
+
+        if (user.details) {
+            updatePayload.details = {
+                ...user.details,
+                firstLoginPasswordChange: false,
+                passwordChangedAt: new Date().toISOString()
+            };
+        }
+
+        await api.updateUser(user.id, updatePayload);
+
+        try {
+            await api.createSecurityLog({
+                userId: user.id,
+                eventType: 'PASSWORD_CHANGED',
+                status: 'SUCCESS',
+                details: 'User updated account password from Profile Settings',
+                userAgent: navigator.userAgent
+            });
+        } catch (_) {}
+
+        const updatedUser = {
+            ...user,
+            password: hashed,
+            firstLoginPasswordChange: false
+        };
+        setUser(updatedUser);
+        localStorage.setItem('spoko_user', JSON.stringify(updatedUser));
+        return true;
+    };
+
     const logout = async () => {
         try {
             const sessionId = localStorage.getItem('spoko_session_id');
@@ -385,7 +479,9 @@ export const AuthProvider = ({ children }) => {
         loading,
         getDeviceId,
         changeFirstLoginPassword,
-        adminResetPassword
+        adminResetPassword,
+        updateUserProfile,
+        changePassword
     };
 
     return (

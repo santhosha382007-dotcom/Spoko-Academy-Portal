@@ -16,6 +16,47 @@ const AIAssistant = () => {
     const GLOBAL_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
     const [apiKey, setApiKey] = useState(localStorage.getItem('openai_api_key') || GLOBAL_KEY);
     const messagesEndRef = useRef(null);
+    const [isListening, setIsListening] = useState(false);
+
+    const handleVoiceInput = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert('Voice speech recognition is not supported in this browser or environment.');
+            return;
+        }
+
+        try {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = () => {
+                setIsListening(true);
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                if (transcript) {
+                    setInput(prev => (prev ? `${prev} ${transcript}` : transcript));
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.warn('Voice input recognition error:', event.error);
+                setIsListening(false);
+            };
+
+            recognition.onend = () => {
+                setIsListening(false);
+            };
+
+            recognition.start();
+        } catch (err) {
+            console.error('Failed to initialize speech recognition:', err);
+            setIsListening(false);
+        }
+    };
 
     const quickActions = [
         { label: "Explain last mistakes", icon: "❌" },
@@ -195,7 +236,13 @@ const AIAssistant = () => {
                     </div>
 
                     <form onSubmit={handleSend} className="input-area">
-                        <button type="button" className="voice-btn" title="Voice Input (Future Upgrade)">
+                        <button 
+                            type="button" 
+                            className={`voice-btn ${isListening ? 'listening' : ''}`} 
+                            onClick={handleVoiceInput} 
+                            title={isListening ? "Listening to your voice..." : "Click to Speak (Voice Input)"}
+                            style={isListening ? { background: '#ef4444' } : {}}
+                        >
                             <span style={{ fontSize: '1.4rem' }}>🎙️</span>
                         </button>
                         <input
