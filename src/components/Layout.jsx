@@ -63,9 +63,10 @@ const Layout = ({ children }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const isAdmin = user?.role === 'admin';
-    const isStudent = user?.role === 'student';
-    const isStaff = user?.role === 'staff';
+    const rawRole = String(user?.role || '').toLowerCase().trim();
+    const isAdmin = rawRole === 'admin';
+    const isStaff = rawRole === 'staff' || rawRole === 'faculty';
+    const isStudent = !isAdmin && !isStaff;
     const isWindows = isWindowsPlatform();
     const isMobile = isMobilePlatform();
 
@@ -280,8 +281,8 @@ const Layout = ({ children }) => {
                         <img src={user?.avatar || logo} alt={user?.name} className="sidebar-avatar" />
                         {(!isCollapsed || isMobileMenuOpen) && (
                             <div className="sidebar-user-meta">
-                                <span className="meta-name">{user?.name}</span>
-                                <span className="meta-role">{user?.role}</span>
+                                <span className="meta-name">{user?.name || 'User'}</span>
+                                <span className="meta-role">{isStaff ? `${user?.department || 'Dept'} Faculty` : (user?.role || 'User')}</span>
                             </div>
                         )}
                         <button 
@@ -329,18 +330,18 @@ const Layout = ({ children }) => {
                             >
                                 <img src={user?.avatar || logo} alt={user?.name} className="profile-pill-avatar" />
                                 <div className="profile-pill-text hide-on-mobile">
-                                    <span className="profile-pill-name">{user?.name}</span>
-                                    <span className="profile-pill-role">{user?.role}</span>
+                                    <span className="profile-pill-name">{user?.name || 'User'}</span>
+                                    <span className="profile-pill-role">{isStaff ? `${user?.department || 'Dept'} Faculty` : (user?.role || 'User')}</span>
                                 </div>
                             </button>
 
                             {showUserMenu && (
                                 <div className="profile-dropdown-card animate-fade-in">
                                     <div className="dropdown-user-header">
-                                        <p className="dropdown-name">{user?.name}</p>
+                                        <p className="dropdown-name">{user?.name || 'User'}</p>
                                         <p className="dropdown-email">{user?.details?.email || `${user?.id}@spokoacademy.edu`}</p>
                                         <span className={`badge ${isAdmin ? 'badge-primary' : isStaff ? 'badge-warning' : 'badge-success'}`}>
-                                            {user?.role ? user.role.toUpperCase() : 'USER'}
+                                            {isStaff ? `${(user?.department || '').toUpperCase()} FACULTY` : (user?.role ? user.role.toUpperCase() : 'USER')}
                                         </span>
                                     </div>
                                     <div className="dropdown-divider" />

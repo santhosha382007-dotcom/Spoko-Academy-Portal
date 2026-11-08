@@ -12,7 +12,13 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(() => {
         try {
             const stored = localStorage.getItem('spoko_user');
-            return stored ? JSON.parse(stored) : null;
+            if (!stored) return null;
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.role) {
+                const r = String(parsed.role).toLowerCase().trim();
+                parsed.role = (r === 'faculty') ? 'staff' : r;
+            }
+            return parsed;
         } catch (e) {
             return null;
         }
@@ -39,12 +45,20 @@ export const AuthProvider = ({ children }) => {
                     await api.createUser(placeholderAdmin);
                 } else if (user) {
                     // Invalidate stale local storage sessions if user was removed
-                    const exists = users.find(u => String(u.id) === String(user.id) || String(u.phone) === String(user.phone));
+                    const exists = users.find(u => 
+                        (user.id && String(u.id).toLowerCase() === String(user.id).toLowerCase()) || 
+                        (user.phone && u.phone && String(u.phone).trim() === String(user.phone).trim())
+                    );
                     if (!exists) {
                         logout();
                     } else if (exists.status !== user.status || exists.firstLoginPasswordChange !== user.firstLoginPasswordChange) {
                         // Keep user state in sync with database updates
-                        const updated = { ...user, status: exists.status, firstLoginPasswordChange: exists.firstLoginPasswordChange };
+                        const updated = { 
+                            ...user, 
+                            status: exists.status, 
+                            firstLoginPasswordChange: exists.firstLoginPasswordChange,
+                            role: String(exists.role || user.role || 'student').toLowerCase().trim()
+                        };
                         setUser(updated);
                         localStorage.setItem('spoko_user', JSON.stringify(updated));
                     }
@@ -89,28 +103,37 @@ export const AuthProvider = ({ children }) => {
 
             // 1. Identify User by Student ID, Phone / Mobile Number, Email, Full Name, or Staff/Department
             const inputClean = String(identifier).trim().toLowerCase();
+            const inputNoSpecial = inputClean.replace(/[-_\s\/]/g, '');
+
             let candidate = users.find(u => {
                 const uId = String(u.id || '').trim().toLowerCase();
                 const uPhone = String(u.phone || '').trim().toLowerCase();
                 const uEmail = String(u.details?.email || u.email || '').trim().toLowerCase();
                 const uName = String(u.name || '').trim().toLowerCase();
-                return uId === inputClean || uPhone === inputClean || uEmail === inputClean || uName === inputClean;
+                return (uId && (uId === inputClean || uId.replace(/[-_\s\/]/g, '') === inputNoSpecial)) || 
+                       (uPhone && uPhone === inputClean) || 
+                       (uEmail && uEmail === inputClean) || 
+                       (uName && uName === inputClean);
             });
 
             // Friendly staff identification fallback:
             // Allows logging in with 'staff', 'faculty', department name ('railway', 'ssc', etc.), or 'staff_<dept>'
             if (!candidate) {
                 if (inputClean === 'staff' || inputClean === 'faculty') {
-                    candidate = users.find(u => u.id === 'staff' || u.role === 'staff');
+                    candidate = users.find(u => u.id === 'staff' || String(u.role).toLowerCase() === 'staff' || String(u.role).toLowerCase() === 'faculty');
                 } else {
                     candidate = users.find(u => {
-                        if (u.role !== 'staff') return false;
+                        const r = String(u.role || '').toLowerCase();
+                        if (r !== 'staff' && r !== 'faculty') return false;
                         const uDept = String(u.department || u.details?.department || '').trim().toLowerCase().replace(/s$/, '');
                         const cleanTest = inputClean.replace(/s$/, '');
+                        const testNoSpecial = inputNoSpecial.replace(/s$/, '');
                         return uDept === cleanTest || 
                                cleanTest === `staff_${uDept}` || 
                                cleanTest === `${uDept}_staff` || 
-                               cleanTest === `${uDept} staff`;
+                               cleanTest === `${uDept} staff` ||
+                               testNoSpecial === `staff${uDept}` ||
+                               testNoSpecial === `${uDept}staff`;
                     });
                 }
             }
@@ -210,8 +233,12 @@ export const AuthProvider = ({ children }) => {
                 candidate.details?.firstLoginPasswordChange === true
             );
 
+            const rawRole = String(candidate.role || 'student').toLowerCase().trim();
+            const normalizedRole = (rawRole === 'faculty') ? 'staff' : rawRole;
+
             const sessionUser = {
                 ...candidate,
+                role: normalizedRole,
                 firstLoginPasswordChange: mustChange
             };
 

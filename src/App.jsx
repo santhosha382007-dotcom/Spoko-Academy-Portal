@@ -37,16 +37,34 @@ import AIAssistant from './pages/student/AIAssistant';
 // Staff Pages
 import DepartmentStudents from './pages/staff/DepartmentStudents';
 
-// Protected Route Component (ADMIN and STUDENT roles only)
+// Protected Route Component (supports admin, student, and staff/faculty roles)
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user } = useAuth();
 
     if (!user) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/login" replace />;
     }
 
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-        return <Navigate to="/" replace />;
+    const rawRole = String(user.role || '').toLowerCase().trim();
+    const effectiveRole = rawRole === 'faculty' ? 'staff' : (rawRole || 'student');
+    const normalizedAllowed = allowedRoles?.map(r => String(r).toLowerCase().trim()) || [];
+
+    if (allowedRoles && !normalizedAllowed.includes(effectiveRole)) {
+        return (
+            <Layout>
+                <div style={{ padding: '3rem 1.5rem', textAlign: 'center' }}>
+                    <div style={{ maxWidth: '480px', margin: '0 auto', background: 'white', padding: '2.5rem 2rem', borderRadius: '18px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>Access Restricted</h2>
+                        <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                            Your account ({user.name || user.id} • {effectiveRole.toUpperCase()}) does not have permission to view this section.
+                        </p>
+                        <a href="/" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </Layout>
+        );
     }
 
     return <Layout>{children}</Layout>;

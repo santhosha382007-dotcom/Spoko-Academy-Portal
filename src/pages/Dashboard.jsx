@@ -10,8 +10,10 @@ import { api } from '../services/api';
 import { isWindowsPlatform } from '../utils/platform';
 
 const AcademyActionHub = ({ user }) => {
-    const isAdmin = user?.role === 'admin';
-    const isStaff = user?.role === 'staff';
+    const rawRole = String(user?.role || '').toLowerCase().trim();
+    const isAdmin = rawRole === 'admin';
+    const isStaff = rawRole === 'staff' || rawRole === 'faculty';
+    const deptDisplay = user?.department || user?.details?.department || 'Department';
 
     return (
         <section className="dashboard-hero-section">
@@ -21,7 +23,7 @@ const AcademyActionHub = ({ user }) => {
                         Welcome back, <span>{user?.name}</span>
                     </h2>
                     <p className="welcome-subtitle">
-                        Spoko Academy Institutional Command Portal • <strong className="role-tag">{isStaff ? `${user?.department || 'Department'} Faculty` : user?.role}</strong>
+                        Spoko Academy Institutional Command Portal • <strong className="role-tag">{isStaff ? `${deptDisplay} Faculty` : user?.role}</strong>
                     </p>
                 </div>
                 <div className="system-status-indicator">
@@ -178,7 +180,11 @@ const AcademyActionHub = ({ user }) => {
 
 const Dashboard = () => {
     const { user, logout } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const rawRole = String(user?.role || '').toLowerCase().trim();
+    const isAdmin = rawRole === 'admin';
+    const isStaff = rawRole === 'staff' || rawRole === 'faculty';
+    const isStudent = !isAdmin && !isStaff;
+
     const [exams, setExams] = useState([]);
     const [results, setResults] = useState([]);
     const [usersList, setUsersList] = useState([]);
@@ -189,17 +195,16 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const resultsPromise = (user?.role === 'student')
-                    ? api.getResultsByUserId(user.id)
+                const resultsPromise = isStudent
+                    ? api.getResultsByUserId(user?.id)
                     : api.getResults();
 
-                const isStaff = user?.role === 'staff';
                 const shouldFetchUsers = isAdmin || isStaff;
 
                 const [examsData, resultsData, usersData, attendanceData, deptsData] = await Promise.all([
-                    api.getExams(),
-                    resultsPromise,
-                    shouldFetchUsers ? api.getUsers() : Promise.resolve([]),
+                    api.getExams().catch(() => []),
+                    resultsPromise.catch(() => []),
+                    shouldFetchUsers ? api.getUsers().catch(() => []) : Promise.resolve([]),
                     api.getAttendance().catch(() => ({})),
                     api.getDepartments().catch(() => [])
                 ]);
@@ -212,14 +217,14 @@ const Dashboard = () => {
                     setUsersList(usersData || []);
                 }
 
-                const announcementsData = await api.getAnnouncements();
+                const announcementsData = await api.getAnnouncements().catch(() => []);
                 setAnnouncements(announcementsData || []);
             } catch (err) {
                 console.error("Dashboard Fetch Error:", err);
             }
         };
         fetchData();
-    }, [user?.id, user?.role, isAdmin]);
+    }, [user?.id, rawRole, isAdmin, isStaff, isStudent]);
 
     const deleteExam = async (id) => {
         if (confirm('Are you sure you want to delete this assessment?')) {
@@ -236,7 +241,7 @@ const Dashboard = () => {
         <div className="dashboard-page-container animate-fade-in">
             <AcademyActionHub user={user} />
 
-            {user?.role === 'admin' && (
+            {isAdmin && (
                 <AdminView 
                     exams={exams} 
                     results={results} 
@@ -249,7 +254,7 @@ const Dashboard = () => {
                 />
             )}
 
-            {user?.role === 'staff' && (
+            {isStaff && (
                 <StaffView 
                     user={user}
                     users={usersList}
@@ -261,7 +266,7 @@ const Dashboard = () => {
                 />
             )}
 
-            {user?.role === 'student' && (
+            {isStudent && (
                 <StudentView 
                     exams={exams} 
                     results={results} 
@@ -939,8 +944,10 @@ const StudentView = ({ exams, results, user, announcements, attendance = {} }) =
 const StaffView = ({ user, users = [], exams = [], results = [], departments = [], announcements = [], attendance = {} }) => {
     const myDept = user?.department || user?.details?.department || 'General';
     const deptClean = String(myDept || '').toLowerCase().trim().replace(/s$/, '');
-    const deptStudents = (users || []).filter(u => {
-        if (u.role !== 'student') return false;
+    
+    const safeUsers = Array.isArray(users) ? users : [];
+    const deptStudents = safeUsers.filter(u => {
+        if (!u || String(u.role).toLowerCase() !== 'student') return false;
         const studentDept = String(u.department || u.details?.department || '').toLowerCase().trim().replace(/s$/, '');
         return studentDept === deptClean || 
                (deptClean === 'gd' && studentDept.includes('gd')) || 
@@ -954,7 +961,9 @@ const StaffView = ({ user, users = [], exams = [], results = [], departments = [
         let isMounted = true;
         api.getQuestions().then(qs => {
             if (!isMounted) return;
-            const count = (qs || []).filter(q => {
+            const list = Array.isArray(qs) ? qs : Array.isArray(qs?.questions) ? qs.questions : [];
+            const count = list.filter(q => {
+                if (!q) return false;
                 const qDept = String(q.department || '').toLowerCase().trim().replace(/s$/, '');
                 const qSub = String(q.subject || '').toLowerCase().trim().replace(/s$/, '');
                 return qDept === deptClean || qSub === deptClean || (deptClean && (qDept.includes(deptClean) || qSub.includes(deptClean)));
@@ -966,13 +975,21 @@ const StaffView = ({ user, users = [], exams = [], results = [], departments = [
 
     // Results of department students
     const deptStudentIds = new Set(deptStudents.map(s => String(s.id)));
-    const deptResults = (results || []).filter(r => deptStudentIds.has(String(r.userId)) || deptStudentIds.has(String(r.studentId)));
+    const safeResults = Array.isArray(results) ? results : [];
+    const deptResults = safeResults.filter(r => r && (deptStudentIds.has(String(r.userId)) || deptStudentIds.has(String(r.studentId))));
 
     const deptAvgScore = deptResults.length > 0
-        ? Math.round(deptResults.reduce((acc, r) => acc + (Number(r.percentage) || (Number(r.score) / (Number(r.totalMarks) || 100)) * 100 || Number(r.score) || 0), 0) / deptResults.length)
+        ? Math.round(deptResults.reduce((acc, r) => {
+            const pct = Number(r.percentage);
+            if (!isNaN(pct) && pct > 0) return acc + pct;
+            const score = Number(r.score) || 0;
+            const total = Number(r.totalMarks) || 100;
+            return acc + (score / total) * 100;
+        }, 0) / deptResults.length)
         : 0;
 
-    const myAnnouncements = (announcements || []).filter(a =>
+    const safeAnnouncements = Array.isArray(announcements) ? announcements : [];
+    const myAnnouncements = safeAnnouncements.filter(a =>
         a && (
             a.target === 'all' ||
             a.target === 'staff' ||
@@ -1039,10 +1056,10 @@ const StaffView = ({ user, users = [], exams = [], results = [], departments = [
                         {myAnnouncements.map((ann, idx) => (
                             <div key={idx} style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                    <strong style={{ fontSize: '0.92rem', color: '#1e293b' }}>{ann.title}</strong>
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{new Date(ann.date || Date.now()).toLocaleDateString()}</span>
+                                    <strong style={{ fontSize: '0.92rem', color: '#1e293b' }}>{ann.title || ann.message || 'Department Broadcast'}</strong>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{new Date(ann.date || ann.createdAt || ann.timestamp || Date.now()).toLocaleDateString()}</span>
                                 </div>
-                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>{ann.content}</p>
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>{ann.content || ann.message || ''}</p>
                             </div>
                         ))}
                     </div>
