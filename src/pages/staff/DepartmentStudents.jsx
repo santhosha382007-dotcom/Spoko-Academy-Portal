@@ -151,7 +151,14 @@ const DepartmentStudents = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Link 
+                        to="/staff/attendance" 
+                        className="btn btn-primary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#059669', borderColor: '#059669' }}
+                    >
+                        <Calendar size={14} /> Mark Attendance
+                    </Link>
                     <button 
                         onClick={loadData}
                         className="btn btn-outline btn-sm"

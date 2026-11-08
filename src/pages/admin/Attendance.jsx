@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Check, X, Search, Calendar, ArrowLeft } from 'lucide-react';
+import { Check, X, Search, Calendar, ArrowLeft, Building2, ExternalLink } from 'lucide-react';
 import { api } from '../../services/api';
 
 const Attendance = () => {
@@ -110,6 +110,95 @@ const Attendance = () => {
                     </div>
                 </div>
             </header>
+
+            {/* Individual Department Quick Switcher */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', overflowX: 'auto', paddingBottom: '4px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginRight: '4px', flexShrink: 0 }}>
+                    Departments:
+                </span>
+                <button
+                    type="button"
+                    onClick={() => setFilterDepartment('All')}
+                    style={{
+                        padding: '0.45rem 0.9rem',
+                        borderRadius: '10px',
+                        border: '1px solid ' + (filterDepartment === 'All' ? '#7c3aed' : '#e2e8f0'),
+                        background: filterDepartment === 'All' ? '#f5f3ff' : 'white',
+                        color: filterDepartment === 'All' ? '#7c3aed' : '#475569',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                    }}
+                >
+                    All Departments ({students.length})
+                </button>
+                {departmentList.map(dept => {
+                    const count = students.filter(s => s.department === dept.name || s.details?.department === dept.name).length;
+                    const isSelected = filterDepartment === dept.name;
+                    return (
+                        <button
+                            key={dept.id}
+                            type="button"
+                            onClick={() => setFilterDepartment(dept.name)}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '0.45rem 0.9rem',
+                                borderRadius: '10px',
+                                border: '1px solid ' + (isSelected ? '#7c3aed' : '#e2e8f0'),
+                                background: isSelected ? '#f5f3ff' : 'white',
+                                color: isSelected ? '#7c3aed' : '#475569',
+                                fontWeight: 700,
+                                fontSize: '0.82rem',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            <Building2 size={13} />
+                            {dept.name} ({count})
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Department Focus Banner */}
+            {filterDepartment !== 'All' && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.85rem 1.25rem',
+                    background: '#f8fafc',
+                    borderRadius: '14px',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '1rem',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Building2 size={18} color="#7c3aed" />
+                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b' }}>
+                            Marking Attendance for <strong>{filterDepartment} Department</strong> ({filteredStudents.length} Students)
+                        </span>
+                    </div>
+                    <Link
+                        to={`/admin/department/${encodeURIComponent(filterDepartment)}?tab=attendance`}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.82rem',
+                            fontWeight: 700,
+                            color: '#7c3aed',
+                            textDecoration: 'none'
+                        }}
+                    >
+                        Open Dedicated {filterDepartment} Workspace <ExternalLink size={14} />
+                    </Link>
+                </div>
+            )}
 
             {/* DAILY ATTENDANCE SHEET */}
             <div className="card glass-panel attendance-content-card">

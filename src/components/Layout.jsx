@@ -46,6 +46,8 @@ const getPageTitle = (pathname) => {
             return { title: 'My Test Results', subtitle: 'Exam scorecards and detailed feedback' };
         case '/staff/students':
             return { title: 'Department Students', subtitle: 'View and track students in your assigned department' };
+        case '/staff/attendance':
+            return { title: 'Department Attendance', subtitle: 'Mark and manage daily attendance for your department students' };
         case '/staff/import-questions':
             return { title: 'Department Question Import', subtitle: 'Upload and parse PDF question sheets for your department' };
         case '/staff/questions':
@@ -253,6 +255,10 @@ const Layout = ({ children }) => {
                             <Link to="/staff/students" className={`sidebar-nav-item ${isActive('/staff/students') ? 'active' : ''}`} title="Department Students">
                                 <Users size={19} className="nav-item-icon" />
                                 {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Department Students</span>}
+                            </Link>
+                            <Link to="/staff/attendance" className={`sidebar-nav-item ${isActive('/staff/attendance') ? 'active' : ''}`} title="Mark Attendance">
+                                <CalendarCheck size={19} className="nav-item-icon" />
+                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Mark Attendance</span>}
                             </Link>
                             <Link to="/staff/import-questions" className={`sidebar-nav-item ${isActive('/staff/import-questions') ? 'active' : ''}`} title="Import Questions">
                                 <FileUp size={19} className="nav-item-icon" />

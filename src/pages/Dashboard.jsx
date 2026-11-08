@@ -82,6 +82,17 @@ const AcademyActionHub = ({ user }) => {
                     </>
                 ) : isStaff ? (
                     <>
+                        <Link to="/staff/attendance" className="action-tile">
+                            <div className="tile-icon-box bg-emerald">
+                                <Calendar size={24} />
+                            </div>
+                            <div className="tile-content">
+                                <h4>Department Attendance</h4>
+                                <p>Mark daily attendance for {user?.department || 'your'} students</p>
+                            </div>
+                            <ArrowRight size={18} className="tile-arrow" />
+                        </Link>
+
                         <Link to="/staff/students" className="action-tile">
                             <div className="tile-icon-box bg-sky">
                                 <Users size={24} />

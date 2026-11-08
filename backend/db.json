@@ -124,6 +124,94 @@
         "department": "TNUSRB",
         "title": "Department Faculty / Staff"
       }
+    },
+    {
+      "id": "ssc_01",
+      "name": "Priya Sharma",
+      "phone": "9876543210",
+      "department": "SSC",
+      "password": "",
+      "role": "student",
+      "status": "active",
+      "firstLoginPasswordChange": false,
+      "avatar": "https://ui-avatars.com/api/?name=Priya+Sharma&background=random",
+      "details": {
+        "studentId": "ssc_01",
+        "fullName": "Priya Sharma",
+        "phone": "9876543210",
+        "email": "priya.sharma@example.com",
+        "department": "SSC",
+        "batch": "2026-SSC",
+        "dob": "",
+        "firstLoginPasswordChange": false,
+        "createdAt": "2026-11-08T10:16:34.978Z"
+      }
+    },
+    {
+      "id": "gd_01",
+      "name": "Rahul Kumar",
+      "phone": "9876543211",
+      "department": "GD",
+      "password": "",
+      "role": "student",
+      "status": "active",
+      "firstLoginPasswordChange": false,
+      "avatar": "https://ui-avatars.com/api/?name=Rahul+Kumar&background=random",
+      "details": {
+        "studentId": "gd_01",
+        "fullName": "Rahul Kumar",
+        "phone": "9876543211",
+        "email": "rahul.kumar@example.com",
+        "department": "GD",
+        "batch": "2026-GD",
+        "dob": "",
+        "firstLoginPasswordChange": false,
+        "createdAt": "2026-11-08T10:16:34.980Z"
+      }
+    },
+    {
+      "id": "tnpsc_01",
+      "name": "Karthik Raj",
+      "phone": "9876543212",
+      "department": "TNPSC",
+      "password": "",
+      "role": "student",
+      "status": "active",
+      "firstLoginPasswordChange": false,
+      "avatar": "https://ui-avatars.com/api/?name=Karthik+Raj&background=random",
+      "details": {
+        "studentId": "tnpsc_01",
+        "fullName": "Karthik Raj",
+        "phone": "9876543212",
+        "email": "karthik.raj@example.com",
+        "department": "TNPSC",
+        "batch": "2026-TNPSC",
+        "dob": "",
+        "firstLoginPasswordChange": false,
+        "createdAt": "2026-11-08T10:16:34.980Z"
+      }
+    },
+    {
+      "id": "tnusrb_01",
+      "name": "Vignesh M",
+      "phone": "9876543213",
+      "department": "TNUSRB",
+      "password": "",
+      "role": "student",
+      "status": "active",
+      "firstLoginPasswordChange": false,
+      "avatar": "https://ui-avatars.com/api/?name=Vignesh+M&background=random",
+      "details": {
+        "studentId": "tnusrb_01",
+        "fullName": "Vignesh M",
+        "phone": "9876543213",
+        "email": "vignesh.m@example.com",
+        "department": "TNUSRB",
+        "batch": "2026-TNUSRB",
+        "dob": "",
+        "firstLoginPasswordChange": false,
+        "createdAt": "2026-11-08T10:16:34.980Z"
+      }
     }
   ],
   "exams": [

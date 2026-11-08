@@ -197,13 +197,22 @@ const Departments = () => {
                                         </div>
                                     </div>
 
-                                    <Link
-                                        to={`/admin/department/${encodeURIComponent(dept.name)}`}
-                                        className="btn btn-outline"
-                                        style={{ width: '100%', textAlign: 'center', fontWeight: 700, fontSize: '0.88rem', display: 'block', textDecoration: 'none' }}
-                                    >
-                                        View Department Students & Metrics
-                                    </Link>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                                        <Link
+                                            to={`/admin/department/${encodeURIComponent(dept.name)}`}
+                                            className="btn btn-outline"
+                                            style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.82rem', padding: '0.65rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                                        >
+                                            Students Roster
+                                        </Link>
+                                        <Link
+                                            to={`/admin/department/${encodeURIComponent(dept.name)}?tab=attendance`}
+                                            className="btn btn-primary"
+                                            style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.82rem', padding: '0.65rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#7c3aed' }}
+                                        >
+                                            <Calendar size={14} /> Mark Attendance
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         );

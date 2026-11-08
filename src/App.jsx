@@ -36,6 +36,7 @@ import AIAssistant from './pages/student/AIAssistant';
 
 // Staff Pages
 import DepartmentStudents from './pages/staff/DepartmentStudents';
+import DepartmentAttendance from './pages/staff/DepartmentAttendance';
 
 // Protected Route Component (supports admin, student, and staff/faculty roles)
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -212,6 +213,11 @@ function App() {
                 <Route path="/staff/students" element={
                     <ProtectedRoute allowedRoles={['staff', 'admin']}>
                         <DepartmentStudents />
+                    </ProtectedRoute>
+                } />
+                <Route path="/staff/attendance" element={
+                    <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                        <DepartmentAttendance />
                     </ProtectedRoute>
                 } />
                 <Route path="/staff/import-questions" element={

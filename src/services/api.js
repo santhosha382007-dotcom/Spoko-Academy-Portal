@@ -273,18 +273,26 @@ export const api = {
             throw { type: 'CONNECTION_ERROR', url: `${getBaseUrl()}/attendance`, original: e };
         }
     },
-    saveAttendance: async (date, records) => {
+    saveAttendance: async (date, records, merge = true) => {
         try {
             // Check if exists
             const checkRes = await fetchWithTimeout(`${getBaseUrl()}/attendance/${date}`);
             if (checkRes.ok) {
+                let finalRecords = records;
+                if (merge) {
+                    try {
+                        const existingData = await checkRes.json();
+                        finalRecords = { ...(existingData.records || {}), ...records };
+                    } catch (_) {}
+                }
                 // Update
                 const res = await fetchWithTimeout(`${getBaseUrl()}/attendance/${date}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ records })
+                    body: JSON.stringify({ records: finalRecords })
                 });
                 if (!res.ok) throw new Error(`Update failed: ${res.status} ${res.statusText}`);
+                return finalRecords;
             } else {
                 // Create
                 const res = await fetchWithTimeout(`${getBaseUrl()}/attendance`, {
@@ -293,6 +301,7 @@ export const api = {
                     body: JSON.stringify({ id: date, records })
                 });
                 if (!res.ok) throw new Error(`Create failed: ${res.status} ${res.statusText}`);
+                return records;
             }
         } catch (e) {
             console.error("API SaveAttendance Error:", e);
