@@ -34,31 +34,61 @@ const LeaveManagement = () => {
         loadData();
     }, []);
 
-    const handleAction = async (id, status, studentName) => {
+    const handleAction = async (id, actionStatus, req) => {
         setIsActioning(true);
         try {
-            await api.updateLeaveRequest(id, {
-                status,
-                reviewedBy: currentUser?.name || 'Administrator',
-                reviewedAt: new Date().toISOString()
-            });
+            if (actionStatus === 'approved') {
+                await api.updateLeaveRequest(id, {
+                    status: 'approved',
+                    adminStatus: 'approved',
+                    reviewedBy: currentUser?.name || 'Administrator',
+                    reviewedAt: new Date().toISOString()
+                });
+
+                // AUTOMATICALLY MARK ATTENDANCE AS 'Leave' FOR ALL DATES IN RANGE
+                if (req?.startDate && req?.endDate && req?.userId) {
+                    try {
+                        const start = new Date(req.startDate);
+                        const end = new Date(req.endDate);
+                        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                            const dateStr = d.toISOString().split('T')[0];
+                            await api.saveAttendance(dateStr, { [req.userId]: 'Leave' }, true);
+                        }
+                    } catch (attErr) {
+                        console.error("Auto attendance mark failed:", attErr);
+                    }
+                }
+            } else {
+                await api.updateLeaveRequest(id, {
+                    status: 'rejected',
+                    adminStatus: 'rejected',
+                    reviewedBy: currentUser?.name || 'Administrator',
+                    reviewedAt: new Date().toISOString()
+                });
+            }
 
             await api.createAuditLog({
-                eventType: `LEAVE_${status.toUpperCase()}`,
+                eventType: `LEAVE_${actionStatus.toUpperCase()}`,
                 performedBy: currentUser?.name || 'Administrator',
-                details: `Admin ${status} leave request for student "${studentName}".`
+                details: `Admin ${actionStatus} leave request for student "${req.studentName}". Attendance marked as Leave.`
             });
 
             await loadData();
         } catch (err) {
-            alert(`Failed to ${status} leave request.`);
+            alert(`Failed to ${actionStatus} leave request.`);
         } finally {
             setIsActioning(false);
         }
     };
 
     const filteredRequests = requests.filter(r => {
-        const matchesStatus = filterStatus === 'All' || (r.status || 'pending').toLowerCase() === filterStatus.toLowerCase();
+        const st = (r.status || 'pending').toLowerCase();
+        const matchesStatus = filterStatus === 'All' || 
+            (filterStatus === 'pending_admin' && st === 'pending_admin') ||
+            (filterStatus === 'pending_staff' && (st === 'pending_staff' || st === 'pending')) ||
+            (filterStatus === 'approved' && st === 'approved') ||
+            (filterStatus === 'rejected' && st === 'rejected');
+
         const matchesDept = filterDept === 'All' || r.department === filterDept;
         const matchesSearch =
             (r.studentName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,7 +97,8 @@ const LeaveManagement = () => {
         return matchesStatus && matchesDept && matchesSearch;
     });
 
-    const pendingCount = requests.filter(r => (r.status || 'pending').toLowerCase() === 'pending').length;
+    const pendingAdminCount = requests.filter(r => (r.status || '').toLowerCase() === 'pending_admin').length;
+    const pendingStaffCount = requests.filter(r => (r.status || 'pending').toLowerCase() === 'pending_staff' || (r.status || '').toLowerCase() === 'pending').length;
     const approvedCount = requests.filter(r => (r.status || '').toLowerCase() === 'approved').length;
     const rejectedCount = requests.filter(r => (r.status || '').toLowerCase() === 'rejected').length;
 
@@ -82,7 +113,7 @@ const LeaveManagement = () => {
                     <div>
                         <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>Leave Management</h1>
                         <p style={{ margin: '0.25rem 0 0', color: '#64748b', fontSize: '0.88rem' }}>
-                            Direct administrative review and approval of student leave requests. No teacher stage required.
+                            Two-stage approval: Endorsed by Department Faculty and finalized by Administration. Upon final approval, student attendance is automatically marked as Leave.
                         </p>
                     </div>
                 </div>
@@ -94,17 +125,17 @@ const LeaveManagement = () => {
                     <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total Requests</div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{requests.length}</div>
                 </div>
+                <div style={{ background: '#eff6ff', padding: '1.25rem', borderRadius: '16px', border: '1px solid #bfdbfe' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#1d4ed8', fontWeight: 600 }}>Staff Endorsed (Needs Admin)</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1d4ed8', marginTop: '4px' }}>{pendingAdminCount}</div>
+                </div>
                 <div style={{ background: '#fffbeb', padding: '1.25rem', borderRadius: '16px', border: '1px solid #fde68a' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>Pending Review</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#b45309', marginTop: '4px' }}>{pendingCount}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>Needs Faculty Endorsement</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#b45309', marginTop: '4px' }}>{pendingStaffCount}</div>
                 </div>
                 <div style={{ background: '#ecfdf5', padding: '1.25rem', borderRadius: '16px', border: '1px solid #a7f3d0' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>Approved</div>
+                    <div style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>Approved & Attendance Marked</div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#047857', marginTop: '4px' }}>{approvedCount}</div>
-                </div>
-                <div style={{ background: '#fef2f2', padding: '1.25rem', borderRadius: '16px', border: '1px solid #fecaca' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#b91c1c', fontWeight: 600 }}>Rejected</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#b91c1c', marginTop: '4px' }}>{rejectedCount}</div>
                 </div>
             </div>
 
@@ -127,9 +158,10 @@ const LeaveManagement = () => {
                         style={{ paddingLeft: '2.5rem', width: '100%', borderRadius: '12px', border: '1px solid var(--color-border)', height: '45px' }}
                     >
                         <option value="All">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
+                        <option value="pending_admin">Staff Endorsed (Needs Admin) ({pendingAdminCount})</option>
+                        <option value="pending_staff">Needs Faculty Review ({pendingStaffCount})</option>
+                        <option value="approved">Approved & Marked ({approvedCount})</option>
+                        <option value="rejected">Rejected ({rejectedCount})</option>
                     </select>
                 </div>
                 <div className="input-with-icon">
@@ -196,17 +228,23 @@ const LeaveManagement = () => {
                                             <span style={{ fontSize: '0.75rem', background: '#ede9fe', color: '#7c3aed', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
                                                 {req.department || 'General'}
                                             </span>
-                                            <span style={{
-                                                fontSize: '0.72rem',
-                                                fontWeight: 800,
-                                                textTransform: 'uppercase',
-                                                padding: '2px 8px',
-                                                borderRadius: '6px',
-                                                background: status === 'approved' ? '#d1fae5' : status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                                                color: status === 'approved' ? '#065f46' : status === 'rejected' ? '#991b1b' : '#92400e'
-                                            }}>
-                                                {status}
-                                            </span>
+                                            {status === 'approved' ? (
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', padding: '2px 8px', borderRadius: '6px', background: '#d1fae5', color: '#065f46' }}>
+                                                    ✓ Final Approved & Attendance Marked
+                                                </span>
+                                            ) : status === 'pending_admin' ? (
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', padding: '2px 8px', borderRadius: '6px', background: '#e0e7ff', color: '#3730a3' }}>
+                                                    ★ Staff Endorsed • Awaiting Admin
+                                                </span>
+                                            ) : status === 'pending_staff' || status === 'pending' ? (
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', padding: '2px 8px', borderRadius: '6px', background: '#fef3c7', color: '#92400e' }}>
+                                                    Pending Faculty Endorsement
+                                                </span>
+                                            ) : (
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', padding: '2px 8px', borderRadius: '6px', background: '#fee2e2', color: '#991b1b' }}>
+                                                    Rejected
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div style={{ marginTop: '0.4rem', fontSize: '0.88rem', color: '#334155' }}>
@@ -216,22 +254,29 @@ const LeaveManagement = () => {
                                         <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
                                             Reason: "{req.reason}"
                                         </p>
+
+                                        {req.staffApprovedBy && (
+                                            <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#4f46e5', fontWeight: 600 }}>
+                                                Endorsed by Department Faculty: {req.staffApprovedBy} on {new Date(req.staffApprovedAt || Date.now()).toLocaleDateString()}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                    {status === 'pending' ? (
+                                    {status !== 'approved' && status !== 'rejected' && status !== 'cancelled' ? (
                                         <>
                                             <button
-                                                onClick={() => handleAction(req.id, 'approved', req.studentName)}
+                                                onClick={() => handleAction(req.id, 'approved', req)}
                                                 className="btn btn-sm"
                                                 style={{ background: '#059669', color: 'white', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
                                                 disabled={isActioning}
+                                                title="Approve leave and automatically mark attendance as Leave"
                                             >
-                                                <Check size={16} /> Approve
+                                                <Check size={16} /> Approve & Mark Attendance
                                             </button>
                                             <button
-                                                onClick={() => handleAction(req.id, 'rejected', req.studentName)}
+                                                onClick={() => handleAction(req.id, 'rejected', req)}
                                                 className="btn btn-sm"
                                                 style={{ background: '#dc2626', color: 'white', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
                                                 disabled={isActioning}

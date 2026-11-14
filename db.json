@@ -188,7 +188,9 @@
       "submissionType": "manual",
       "violationsCount": 0,
       "submittedAt": "2026-10-07T05:35:20.710Z",
-      "date": "2026-10-07T05:35:20.710Z"
+      "date": "2026-10-07T05:35:20.710Z",
+      "department": "Railway",
+      "studentDepartment": "Railway"
     }
   ],
   "attendance": [

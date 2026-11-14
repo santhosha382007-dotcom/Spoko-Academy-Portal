@@ -223,8 +223,19 @@ export const api = {
     getResultsByUserId: async (userId) => {
         try {
             const res = await fetchWithTimeout(`${getBaseUrl()}/results?userId=${userId}`);
-            if (!res.ok) throw new Error(`Server returned ${res.status}`);
-            return await res.json();
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) return data;
+            }
+            // Resilient fallback: fetch all results and filter by string-normalized userId or studentId
+            const allRes = await fetchWithTimeout(`${getBaseUrl()}/results`);
+            if (allRes.ok) {
+                const allData = await allRes.json();
+                if (Array.isArray(allData)) {
+                    return allData.filter(r => String(r.userId) === String(userId) || String(r.studentId) === String(userId));
+                }
+            }
+            return [];
         } catch (e) {
             console.error("API GetResultsByUserId Error:", e);
             throw e;

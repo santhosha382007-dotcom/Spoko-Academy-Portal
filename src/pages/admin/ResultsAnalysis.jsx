@@ -12,12 +12,15 @@ const ResultsAnalysis = () => {
 
     const [results, setResults] = useState([]);
     const [exams, setExams] = useState([]);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDept, setFilterDept] = useState(() => isStaff ? staffDept : 'All');
     const [filterExam, setFilterExam] = useState('All');
 
     const DEPARTMENTS = ['Railway', 'Railways', 'SSC', 'SSC GD', 'GD', 'TNPSC', 'TNUSRB', 'Agnipath'];
+
+    const normalizeDept = (dept) => String(dept || '').toLowerCase().trim().replace(/s$/, '');
 
     useEffect(() => {
         if (isStaff && staffDept) {
@@ -32,12 +35,14 @@ const ResultsAnalysis = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [resultsData, examsData] = await Promise.all([
+            const [resultsData, examsData, usersData] = await Promise.all([
                 api.getResults(),
-                api.getExams()
+                api.getExams(),
+                api.getUsers().catch(() => [])
             ]);
-            setResults(resultsData.reverse());
-            setExams(examsData);
+            setResults((resultsData || []).reverse());
+            setExams(examsData || []);
+            setUsers(usersData || []);
         } catch (e) {
             console.error("Failed to load results", e);
         } finally {
@@ -46,14 +51,38 @@ const ResultsAnalysis = () => {
     };
 
     const filteredResults = results.filter(r => {
+        const student = users.find(u => 
+            String(u.id) === String(r.userId) || 
+            String(u.id) === String(r.studentId) ||
+            (r.studentPhone && String(u.phone) === String(r.studentPhone))
+        );
+
+        const studentName = r.studentName || student?.name || student?.details?.fullName || `Student #${r.userId}`;
+        const examTitle = r.examTitle || '';
+
         const matchesSearch =
-            (r.studentName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.examTitle || '').toLowerCase().includes(searchTerm.toLowerCase());
+            studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            examTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            String(r.userId || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         const exam = exams.find(e => String(e.id) === String(r.examId));
-        const examDept = String(exam?.department || r.department || '').toLowerCase().trim().replace(/s$/, '');
-        const targetDept = String(filterDept || '').toLowerCase().trim().replace(/s$/, '');
-        const matchesDept = filterDept === 'All' || examDept === targetDept || (targetDept && examDept.includes(targetDept));
+        const examDept = normalizeDept(exam?.department || r.examDepartment);
+        const studentDept = normalizeDept(student?.department || student?.details?.department || r.studentDepartment || r.department);
+        const targetDept = normalizeDept(filterDept);
+
+        let matchesDept = filterDept === 'All';
+        if (!matchesDept && targetDept) {
+            matchesDept =
+                studentDept === targetDept ||
+                (targetDept && studentDept.includes(targetDept)) ||
+                (studentDept && targetDept.includes(studentDept)) ||
+                examDept === targetDept ||
+                (targetDept && examDept.includes(targetDept)) ||
+                (examDept && targetDept.includes(examDept)) ||
+                // If exam was general/generic, any student from target department taking it belongs to target department
+                ((examDept === 'generic' || examDept === 'general' || examDept === 'all' || !examDept) && (studentDept === targetDept || studentDept.includes(targetDept)));
+        }
+
         const matchesExam = filterExam === 'All' || String(r.examId) === String(filterExam);
 
         return matchesSearch && matchesDept && matchesExam;
@@ -101,15 +130,15 @@ const ResultsAnalysis = () => {
             <div className="stats-grid" style={{ marginBottom: '3rem' }}>
                 <div className="card stat-card">
                     <div className="stat-icon"><User size={24} /></div>
-                    <div className="stat-info"><h3>{new Set(results.map(r => r.userId)).size}</h3><p className="text-muted">Total Students</p></div>
+                    <div className="stat-info"><h3>{new Set(dataForStats.map(r => r.userId)).size}</h3><p className="text-muted">{isStaff ? 'Department Students' : 'Total Students'}</p></div>
                 </div>
                 <div className="card stat-card">
                     <div className="stat-icon" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}><Award size={24} /></div>
-                    <div className="stat-info"><h3>{Math.round(results.reduce((acc, curr) => acc + curr.score, 0) / (results.length || 1))}%</h3><p className="text-muted">Avg. Performance</p></div>
+                    <div className="stat-info"><h3>{Math.round(dataForStats.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0) / (dataForStats.length || 1))}%</h3><p className="text-muted">Avg. Performance</p></div>
                 </div>
                 <div className="card stat-card">
                     <div className="stat-icon" style={{ color: 'var(--color-secondary)', background: 'rgba(236,72,153,0.1)' }}><BookOpen size={24} /></div>
-                    <div className="stat-info"><h3>{results.length}</h3><p className="text-muted">Submissions</p></div>
+                    <div className="stat-info"><h3>{dataForStats.length}</h3><p className="text-muted">{isStaff ? 'Dept Submissions' : 'Submissions'}</p></div>
                 </div>
             </div>
 
@@ -181,19 +210,44 @@ const ResultsAnalysis = () => {
                         <thead>
                             <tr style={{ textAlign: 'left', background: '#f8fafc' }}>
                                 <th style={{ padding: '1.25rem' }}>Student</th>
+                                <th style={{ padding: '1.25rem' }}>Department</th>
                                 <th style={{ padding: '1.25rem' }}>Exam</th>
                                 <th style={{ padding: '1.25rem' }}>Score</th>
                                 <th style={{ padding: '1.25rem' }}>Breakdown</th>
                                 <th style={{ padding: '1.25rem' }}>Violations</th>
                                 <th style={{ padding: '1.25rem' }}>Submission Trigger</th>
                                 <th style={{ padding: '1.25rem' }}>Status</th>
+                                <th style={{ padding: '1.25rem', textAlign: 'right' }}>Report</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredResults.map((r, i) => (
+                            {filteredResults.length === 0 ? (
+                                <tr>
+                                    <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                                        No student submissions found matching the criteria.
+                                    </td>
+                                </tr>
+                            ) : filteredResults.map((r, i) => {
+                                const student = users.find(u => 
+                                    String(u.id) === String(r.userId) || 
+                                    String(u.id) === String(r.studentId) ||
+                                    (r.studentPhone && String(u.phone) === String(r.studentPhone))
+                                );
+                                const studentName = r.studentName || student?.name || student?.details?.fullName || `Student #${r.userId}`;
+                                const deptName = student?.department || student?.details?.department || r.studentDepartment || r.department || 'General';
+
+                                return (
                                 <tr key={i} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                    <td style={{ padding: '1.25rem', fontWeight: 600 }}>{r.studentName || r.userId}</td>
-                                    <td style={{ padding: '1.25rem' }}>{r.examTitle}</td>
+                                    <td style={{ padding: '1.25rem' }}>
+                                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{studentName}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ID: {r.userId}</div>
+                                    </td>
+                                    <td style={{ padding: '1.25rem' }}>
+                                        <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: '#e0e7ff', color: '#4338ca' }}>
+                                            {deptName}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '1.25rem', fontWeight: 600 }}>{r.examTitle}</td>
                                     <td style={{ padding: '1.25rem', fontWeight: 700, color: getGradeColor(r.score) }}>
                                         {r.score !== undefined ? `${r.score}%` : `${r.percentage || 0}%`}
                                     </td>
@@ -229,8 +283,18 @@ const ResultsAnalysis = () => {
                                             {r.score >= 50 ? 'Passed' : 'Failed'}
                                         </span>
                                     </td>
+                                    <td style={{ padding: '1.25rem', textAlign: 'right' }}>
+                                        <Link
+                                            to={`/admin/reports/${r.userId}`}
+                                            className="btn btn-outline btn-sm"
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}
+                                        >
+                                            View Report
+                                        </Link>
+                                    </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

@@ -136,6 +136,17 @@ const AcademyActionHub = ({ user }) => {
                             </div>
                             <ArrowRight size={18} className="tile-arrow" />
                         </Link>
+
+                        <Link to="/staff/leave" className="action-tile">
+                            <div className="tile-icon-box bg-amber">
+                                <CalendarCheck size={24} />
+                            </div>
+                            <div className="tile-content">
+                                <h4>Leave Endorsements</h4>
+                                <p>Review & endorse student leaves</p>
+                            </div>
+                            <ArrowRight size={18} className="tile-arrow" />
+                        </Link>
                     </>
                 ) : (
                     <>
@@ -167,7 +178,7 @@ const AcademyActionHub = ({ user }) => {
                             </div>
                             <div className="tile-content">
                                 <h4>Daily Attendance</h4>
-                                <p>View status & mark attendance</p>
+                                <p>View daily attendance & status</p>
                             </div>
                             <ArrowRight size={18} className="tile-arrow" />
                         </Link>

@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 const StudentLeave = () => {
     const { user } = useAuth();
     const [requests, setRequests] = useState([]);
-    const [balance, setBalance] = useState({ total: 12, used: 0, pending: 0, remaining: 12 });
+    const [summary, setSummary] = useState({ total: 0, approved: 0, pendingStaff: 0, pendingAdmin: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [showApplyModal, setShowApplyModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,22 +24,25 @@ const StudentLeave = () => {
         setIsLoading(true);
         try {
             const userRequests = await api.getLeaveRequestsByUserId(user.id);
-            setRequests(userRequests.reverse());
+            const sorted = (userRequests || []).reverse();
+            setRequests(sorted);
 
-            // Compute balance: 12 standard annual leave days
-            let approvedDays = 0;
-            let pendingDays = 0;
-            userRequests.forEach(r => {
-                const days = r.daysCount || 1;
-                if ((r.status || '').toLowerCase() === 'approved') approvedDays += days;
-                if ((r.status || '').toLowerCase() === 'pending') pendingDays += days;
+            let appCount = 0;
+            let pStaff = 0;
+            let pAdmin = 0;
+
+            sorted.forEach(r => {
+                const st = (r.status || 'pending').toLowerCase();
+                if (st === 'approved') appCount++;
+                else if (st === 'pending_admin') pAdmin++;
+                else if (st === 'pending_staff' || st === 'pending') pStaff++;
             });
 
-            setBalance({
-                total: 12,
-                used: approvedDays,
-                pending: pendingDays,
-                remaining: Math.max(0, 12 - approvedDays)
+            setSummary({
+                total: sorted.length,
+                approved: appCount,
+                pendingStaff: pStaff,
+                pendingAdmin: pAdmin
             });
         } catch (err) {
             console.error("Failed to load student leave requests", err);
@@ -70,18 +73,21 @@ const StudentLeave = () => {
         const days = calculateDays(form.startDate, form.endDate);
         setIsSubmitting(true);
         try {
+            const dept = user.department || user.details?.department || 'General';
             const newRequest = {
                 id: 'leave_' + Date.now(),
                 userId: user.id,
                 studentId: user.details?.studentId || user.id,
                 studentName: user.name,
-                department: user.details?.department || 'General',
+                department: dept,
                 leaveType: form.leaveType,
                 startDate: form.startDate,
                 endDate: form.endDate,
                 daysCount: days,
                 reason: form.reason.trim(),
-                status: 'pending',
+                status: 'pending_staff',
+                staffStatus: 'pending',
+                adminStatus: 'pending',
                 submittedAt: new Date().toISOString()
             };
 
@@ -91,10 +97,10 @@ const StudentLeave = () => {
                 eventType: 'LEAVE_SUBMITTED',
                 performedBy: user.name,
                 userId: user.id,
-                details: `Student ${user.name} submitted ${days}-day ${form.leaveType} request.`
+                details: `Student ${user.name} submitted ${days}-day ${form.leaveType} request for ${dept} Department.`
             });
 
-            alert("Leave request submitted successfully. Waiting for Administrator review.");
+            alert("Leave request submitted successfully! Your department faculty will review it first, followed by final administrator approval.");
             setShowApplyModal(false);
             setForm({
                 leaveType: 'Casual Leave',
@@ -121,6 +127,58 @@ const StudentLeave = () => {
         }
     };
 
+    const getStatusDisplay = (req) => {
+        const st = (req.status || 'pending').toLowerCase();
+        if (st === 'approved') {
+            return {
+                label: 'Approved & Marked in Attendance',
+                badgeBg: '#d1fae5',
+                badgeColor: '#065f46',
+                iconColor: '#059669',
+                iconBg: '#ecfdf5',
+                desc: `Endorsed by ${req.staffApprovedBy || 'Staff'} and approved by ${req.adminReviewedBy || 'Admin'}.`
+            };
+        }
+        if (st === 'pending_admin') {
+            return {
+                label: 'Staff Endorsed • Awaiting Admin',
+                badgeBg: '#e0e7ff',
+                badgeColor: '#3730a3',
+                iconColor: '#4f46e5',
+                iconBg: '#eef2ff',
+                desc: `Approved by Department Faculty (${req.staffApprovedBy || 'Staff'}). Waiting for final Admin approval.`
+            };
+        }
+        if (st === 'pending_staff' || st === 'pending') {
+            return {
+                label: 'Awaiting Dept Staff Review',
+                badgeBg: '#fef3c7',
+                badgeColor: '#92400e',
+                iconColor: '#d97706',
+                iconBg: '#fffbeb',
+                desc: 'Waiting for review and approval by your Department Staff.'
+            };
+        }
+        if (st === 'rejected') {
+            return {
+                label: 'Rejected',
+                badgeBg: '#fee2e2',
+                badgeColor: '#991b1b',
+                iconColor: '#dc2626',
+                iconBg: '#fef2f2',
+                desc: req.adminStatus === 'rejected' ? 'Rejected by Administrator.' : 'Rejected by Department Faculty.'
+            };
+        }
+        return {
+            label: 'Cancelled',
+            badgeBg: '#f1f5f9',
+            badgeColor: '#475569',
+            iconColor: '#64748b',
+            iconBg: '#f1f5f9',
+            desc: 'Cancelled by student.'
+        };
+    };
+
     return (
         <div style={{ paddingBottom: '3rem' }}>
             {/* Header */}
@@ -130,9 +188,9 @@ const StudentLeave = () => {
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>Leave Portal</h1>
+                        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>Leave Applications</h1>
                         <p style={{ margin: '0.25rem 0 0', color: '#64748b', fontSize: '0.88rem' }}>
-                            Submit absence requests directly to the Administrator and track balances.
+                            Students can apply for leave anytime. Multi-stage approval: Department Staff review followed by Administrator approval.
                         </p>
                     </div>
                 </div>
@@ -145,23 +203,23 @@ const StudentLeave = () => {
                 </button>
             </div>
 
-            {/* Leave Balance Cards */}
+            {/* Leave Metric Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                 <div style={{ background: 'white', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total Allocated</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{balance.total} Days</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total Applications</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>{summary.total}</div>
                 </div>
                 <div style={{ background: '#ecfdf5', padding: '1.25rem', borderRadius: '16px', border: '1px solid #a7f3d0' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>Available Balance</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#047857', marginTop: '4px' }}>{balance.remaining} Days</div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Approved Leaves</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#475569', marginTop: '4px' }}>{balance.used} Days</div>
+                    <div style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>Approved Leaves</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#047857', marginTop: '4px' }}>{summary.approved}</div>
                 </div>
                 <div style={{ background: '#fffbeb', padding: '1.25rem', borderRadius: '16px', border: '1px solid #fde68a' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>Pending Review</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#b45309', marginTop: '4px' }}>{balance.pending} Days</div>
+                    <div style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>Awaiting Staff Review</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#b45309', marginTop: '4px' }}>{summary.pendingStaff}</div>
+                </div>
+                <div style={{ background: '#eff6ff', padding: '1.25rem', borderRadius: '16px', border: '1px solid #bfdbfe' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#1d4ed8', fontWeight: 600 }}>Awaiting Admin Approval</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1d4ed8', marginTop: '4px' }}>{summary.pendingAdmin}</div>
                 </div>
             </div>
 
@@ -175,12 +233,13 @@ const StudentLeave = () => {
                 </div>
             ) : requests.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '3.5rem', color: '#64748b' }}>
-                    You have not submitted any leave requests yet.
+                    You have not submitted any leave requests yet. You can apply anytime above.
                 </div>
             ) : (
                 <div style={{ display: 'grid', gap: '1rem' }}>
                     {requests.map(req => {
-                        const status = (req.status || 'pending').toLowerCase();
+                        const statusInfo = getStatusDisplay(req);
+                        const isPendingAny = (req.status || 'pending').toLowerCase().includes('pending');
                         return (
                             <div
                                 key={req.id}
@@ -199,14 +258,14 @@ const StudentLeave = () => {
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                     <div style={{
                                         width: '44px', height: '44px', borderRadius: '12px',
-                                        background: status === 'approved' ? '#ecfdf5' : status === 'rejected' ? '#fef2f2' : status === 'cancelled' ? '#f1f5f9' : '#fffbeb',
-                                        color: status === 'approved' ? '#059669' : status === 'rejected' ? '#dc2626' : status === 'cancelled' ? '#64748b' : '#d97706',
+                                        background: statusInfo.iconBg,
+                                        color: statusInfo.iconColor,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                                     }}>
                                         <CalendarCheck size={22} />
                                     </div>
                                     <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             <span style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a' }}>
                                                 {req.leaveType}
                                             </span>
@@ -214,12 +273,12 @@ const StudentLeave = () => {
                                                 fontSize: '0.72rem',
                                                 fontWeight: 800,
                                                 textTransform: 'uppercase',
-                                                padding: '2px 8px',
+                                                padding: '3px 8px',
                                                 borderRadius: '6px',
-                                                background: status === 'approved' ? '#d1fae5' : status === 'rejected' ? '#fee2e2' : status === 'cancelled' ? '#f1f5f9' : '#fef3c7',
-                                                color: status === 'approved' ? '#065f46' : status === 'rejected' ? '#991b1b' : status === 'cancelled' ? '#475569' : '#92400e'
+                                                background: statusInfo.badgeBg,
+                                                color: statusInfo.badgeColor
                                             }}>
-                                                {status}
+                                                {statusInfo.label}
                                             </span>
                                         </div>
                                         <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '2px' }}>
@@ -228,11 +287,14 @@ const StudentLeave = () => {
                                         <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
                                             Reason: "{req.reason}"
                                         </div>
+                                        <div style={{ fontSize: '0.75rem', color: '#8b5cf6', marginTop: '2px', fontWeight: 600 }}>
+                                            {statusInfo.desc}
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    {status === 'pending' && (
+                                    {isPendingAny && (
                                         <button
                                             onClick={() => handleCancel(req.id)}
                                             className="btn btn-outline btn-sm"

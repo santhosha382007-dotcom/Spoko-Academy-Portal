@@ -378,13 +378,16 @@ module.exports = async (req, res, next) => {
             // 5. Create Result Record
             const user = (db.users || []).find(u => u.id === userId);
             const passingScore = exam.passingMarks || 50;
+            const studentDept = user?.department || user?.details?.department || (exam.department && exam.department !== 'Generic' && exam.department !== 'General' ? exam.department : 'General');
             const resultRecord = {
                 id: Date.now(),
                 attemptId: attempt.id,
                 examId: exam.id,
                 examTitle: exam.title,
                 category: exam.category || exam.department || 'General',
-                department: exam.department || user?.department || 'General',
+                department: studentDept,
+                studentDepartment: user?.department || user?.details?.department || studentDept,
+                examDepartment: exam.department || 'General',
                 userId: user?.id || userId,
                 studentName: user?.name || 'Student',
                 studentPhone: user?.phone || '',

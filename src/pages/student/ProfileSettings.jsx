@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const ProfileSettings = () => {
     const { user, updateUserProfile, changePassword } = useAuth();
+    const isStudent = String(user?.role || '').toLowerCase() === 'student';
     
     // Active navigation tab: 'general' | 'security' | 'notifications'
     const [activeTab, setActiveTab] = useState('general');
@@ -33,14 +34,19 @@ const ProfileSettings = () => {
 
     const fileInputRef = useRef(null);
 
-    // Handle Avatar file upload
+    // Handle Avatar file upload (Restricted: Students cannot upload or edit profile photos)
     const handleAvatarClick = () => {
+        if (isStudent) {
+            alert('Students are not permitted to change profile photos. Only Institute Administrators can assign photos.');
+            return;
+        }
         if (fileInputRef.current) {
             fileInputRef.current.click();
         }
     };
 
     const handleAvatarChange = (e) => {
+        if (isStudent) return;
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -82,12 +88,16 @@ const ProfileSettings = () => {
 
         setIsSavingProfile(true);
         try {
-            await updateUserProfile({
+            const profilePayload = {
                 name: name.trim(),
                 email: email.trim(),
-                phone: phone.trim(),
-                avatar: avatar || user?.avatar
-            });
+                phone: phone.trim()
+            };
+            if (!isStudent && (avatar || user?.avatar)) {
+                profilePayload.avatar = avatar || user?.avatar;
+            }
+
+            await updateUserProfile(profilePayload);
             setIsEditing(false);
             setProfileMessage({ type: 'success', text: 'Profile details saved successfully!' });
             setTimeout(() => setProfileMessage(null), 4000);
@@ -145,24 +155,43 @@ const ProfileSettings = () => {
                     <div className="avatar-upload-group">
                         <div className="avatar-preview">
                             <img src={displayAvatar} alt="Profile" />
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                style={{ display: 'none' }}
-                                accept="image/*"
-                                onChange={handleAvatarChange}
-                            />
-                            <button
-                                type="button"
-                                className="camera-btn"
-                                onClick={handleAvatarClick}
-                                title="Upload new profile picture"
-                                aria-label="Change profile photo"
-                            >
-                                <Camera size={16} />
-                            </button>
+                            {!isStudent && (
+                                <>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        style={{ display: 'none' }}
+                                        accept="image/*"
+                                        onChange={handleAvatarChange}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="camera-btn"
+                                        onClick={handleAvatarClick}
+                                        title="Upload new profile picture"
+                                        aria-label="Change profile photo"
+                                    >
+                                        <Camera size={16} />
+                                    </button>
+                                </>
+                            )}
                         </div>
-                        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                        {isStudent && (
+                            <div style={{
+                                marginTop: '0.75rem',
+                                fontSize: '0.75rem',
+                                color: '#64748b',
+                                textAlign: 'center',
+                                background: '#f8fafc',
+                                padding: '4px 8px',
+                                borderRadius: '8px',
+                                border: '1px solid #e2e8f0',
+                                fontWeight: 600
+                            }}>
+                                🔒 Photo managed by Admin
+                            </div>
+                        )}
+                        <div style={{ textAlign: 'center', marginTop: isStudent ? '0.75rem' : '1.5rem' }}>
                             <h3 style={{ margin: '0', fontSize: '1.15rem', color: '#0f172a' }}>{user?.name}</h3>
                             <p className="text-muted" style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
                                 User ID: #{user?.id || '01'}

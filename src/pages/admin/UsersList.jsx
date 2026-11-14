@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { 
     ArrowLeft, Search, Shield, Trash2, Ban, Loader, FileText, Download, 
     Upload, Filter, Edit, UserPlus, X, KeyRound, CheckCircle, AlertTriangle, 
-    RefreshCw, Check, AlertCircle, Eye, EyeOff, UserCheck, Users
+    RefreshCw, Check, AlertCircle, Eye, EyeOff, UserCheck, Users, Camera
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -453,7 +453,7 @@ const UsersList = () => {
                 role: 'student',
                 status: 'active',
                 firstLoginPasswordChange: true,
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newStudent.fullName.trim())}&background=random`,
+                avatar: newStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(newStudent.fullName.trim())}&background=random`,
                 details: {
                     studentId: cleanId,
                     fullName: newStudent.fullName.trim(),
@@ -462,6 +462,7 @@ const UsersList = () => {
                     department: newStudent.department || departments[0]?.name || 'General',
                     batch: newStudent.batch || '2026-A',
                     dob: newStudent.dob || '',
+                    avatar: newStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(newStudent.fullName.trim())}&background=random`,
                     firstLoginPasswordChange: true,
                     createdAt: new Date().toISOString()
                 }
@@ -642,13 +643,15 @@ const UsersList = () => {
                 phone: editingStudent.phone,
                 status: editingStudent.status,
                 department: editingStudent.department,
+                avatar: editingStudent.avatar,
                 details: {
                     ...editingStudent.details,
                     fullName: editingStudent.name,
                     phone: editingStudent.phone,
                     email: editingStudent.email,
                     department: editingStudent.department,
-                    batch: editingStudent.batch
+                    batch: editingStudent.batch,
+                    avatar: editingStudent.avatar
                 }
             };
 
@@ -1018,6 +1021,7 @@ const UsersList = () => {
                                                     department: student.details?.department || departments[0]?.name || '',
                                                     batch: student.details?.batch || '2026-A',
                                                     status: student.status || 'active',
+                                                    avatar: student.avatar || student.details?.avatar || '',
                                                     details: student.details || {}
                                                 })}
                                                 className="btn-icon-sm"
@@ -1186,6 +1190,39 @@ const UsersList = () => {
                         </div>
 
                         <form onSubmit={handleCreateStudent} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {/* Admin-only Profile Photo Upload */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem', background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                <img
+                                    src={newStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(newStudent.fullName?.trim() || 'Student')}&background=7c3aed&color=fff`}
+                                    alt="Student Preview"
+                                    style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #7c3aed' }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>Student Photo (Admin Managed)</div>
+                                    <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', padding: '4px 10px', marginTop: '0.25rem' }}>
+                                        <Camera size={14} /> Choose Photo
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                if (file.size > 2 * 1024 * 1024) {
+                                                    alert("Image must be smaller than 2MB.");
+                                                    return;
+                                                }
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => {
+                                                    setNewStudent(prev => ({ ...prev, avatar: ev.target.result }));
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Student ID *</label>
@@ -1723,6 +1760,40 @@ const UsersList = () => {
                         </div>
 
                         <form onSubmit={handleSaveStudentEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {/* Profile Photo Management by Admin */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem', background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                <img
+                                    src={editingStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(editingStudent.name || 'Student')}&background=7c3aed&color=fff`}
+                                    alt={editingStudent.name}
+                                    style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #7c3aed' }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>Student Profile Photo</div>
+                                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '0.4rem' }}>Only administrators have rights to set student photos</div>
+                                    <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', padding: '4px 10px' }}>
+                                        <Camera size={14} /> Upload / Change Photo
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                if (file.size > 2 * 1024 * 1024) {
+                                                    alert("Image must be smaller than 2MB.");
+                                                    return;
+                                                }
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => {
+                                                    setEditingStudent(prev => ({ ...prev, avatar: ev.target.result }));
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Full Name</label>
                                 <input

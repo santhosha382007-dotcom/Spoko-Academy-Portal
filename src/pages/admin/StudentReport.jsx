@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Mail, Phone, Calendar, BookOpen, Award, BarChart2, TrendingUp, Clock, GraduationCap } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Calendar, BookOpen, Award, BarChart2, TrendingUp, Clock, GraduationCap, Printer } from 'lucide-react';
+import logo from '../../assets/logo.png';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -77,14 +78,24 @@ const StudentReport = () => {
     return (
         <div className="report-container animate-fade-in" style={{ paddingBottom: '3rem' }}>
             {/* Header */}
-            <header style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                <Link to={currentUser?.role === 'staff' ? '/staff/students' : '/admin/users'} className="btn-icon" style={{ background: 'white' }}>
-                    <ArrowLeft size={20} />
-                </Link>
-                <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Personal Performance Report</h1>
-                    <p className="text-muted">Detailed overview for {student.name}</p>
+            <header style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <Link to={currentUser?.role === 'staff' ? '/staff/students' : '/admin/users'} className="btn-icon no-print" style={{ background: 'white' }}>
+                        <ArrowLeft size={20} />
+                    </Link>
+                    <div>
+                        <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Personal Performance Report</h1>
+                        <p className="text-muted">Detailed academic & evaluation overview for {student.name}</p>
+                    </div>
                 </div>
+                <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="btn btn-outline btn-sm no-print"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}
+                >
+                    <Printer size={16} /> Print Official Dossier
+                </button>
             </header>
 
             <div className="report-grid">
@@ -318,6 +329,35 @@ const StudentReport = () => {
 
                 .badge-success { background: #d1fae5; color: #065f46; }
                 .badge-danger { background: #fee2e2; color: #991b1b; }
+
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 12mm 15mm;
+                    }
+                    body, html {
+                        background: #ffffff !important;
+                        color: #0f172a !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .app-sidebar,
+                    .app-topbar,
+                    .app-bottom-bar,
+                    .no-print {
+                        display: none !important;
+                    }
+                    .report-container {
+                        padding: 0 !important;
+                    }
+                    .card {
+                        box-shadow: none !important;
+                        border: 1px solid #cbd5e1 !important;
+                    }
+                    .stat-card {
+                        border: 1px solid #cbd5e1 !important;
+                    }
+                }
 
                 @media (max-width: 992px) {
                     .report-grid { grid-template-columns: 1fr; }

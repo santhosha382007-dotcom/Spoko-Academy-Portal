@@ -10,9 +10,6 @@ const StudentAttendance = () => {
     const [stats, setStats] = useState({ present: 0, absent: 0, leave: 0, total: 0 });
     const [loading, setLoading] = useState(true);
 
-    // Punch state
-    const [isPunching, setIsPunching] = useState(false);
-    const [punchStatus, setPunchStatus] = useState(null);
     const [todayMarked, setTodayMarked] = useState(false);
     const [todayRecord, setTodayRecord] = useState(null);
 
@@ -57,46 +54,6 @@ const StudentAttendance = () => {
         }
     };
 
-    const handleMarkAttendance = async () => {
-        setIsPunching(true);
-        setPunchStatus(null);
-        try {
-            const allAttendance = await api.getAttendance();
-            const existingDay = allAttendance[todayStr] || {};
-            await api.saveAttendance(todayStr, {
-                ...existingDay,
-                [user.id]: 'Present'
-            });
-
-            try {
-                await api.createSecurityLog?.({
-                    userId: user.id,
-                    eventType: 'ATTENDANCE_MARKED',
-                    status: 'SUCCESS',
-                    details: `Student marked attendance for ${todayStr}`,
-                    userAgent: navigator.userAgent
-                });
-            } catch (_) {}
-
-            setTodayMarked(true);
-            setTodayRecord('Present');
-            setPunchStatus({
-                type: 'success',
-                message: 'Attendance marked successfully for today!'
-            });
-
-            await loadData();
-        } catch (err) {
-            console.error("Attendance marking error:", err);
-            setPunchStatus({
-                type: 'error',
-                message: 'Failed to record attendance. Please check network connection.'
-            });
-        } finally {
-            setIsPunching(false);
-        }
-    };
-
     const percentage = stats.total === 0 ? 100 : Math.round((stats.present / stats.total) * 100);
 
     return (
@@ -108,87 +65,58 @@ const StudentAttendance = () => {
                 <div>
                     <h1 style={{ margin: 0 }}>My Attendance</h1>
                     <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-                        Daily Attendance & Academic Record
+                        Official Institutional Daily Attendance Roster
                     </p>
                 </div>
             </div>
 
-            {/* DAILY ATTENDANCE MARKING CARD */}
+            {/* OFFICIAL ATTENDANCE OVERSIGHT CARD */}
             <div className="card glass-panel" style={{
                 padding: '2rem',
                 borderRadius: '16px',
                 border: '1px solid #e0e7ff',
                 marginBottom: '2rem',
-                background: 'linear-gradient(135deg, #ffffff, #f5f3ff)'
+                background: 'linear-gradient(135deg, #ffffff, #f8fafc)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
                             <Calendar size={22} color="var(--color-primary)" />
-                            <h2 style={{ margin: 0, fontSize: '1.35rem', color: '#1e293b' }}>Mark Daily Attendance</h2>
+                            <h2 style={{ margin: 0, fontSize: '1.35rem', color: '#1e293b' }}>Today's Attendance Status</h2>
                         </div>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                            Record your presence for today ({new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })})
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: '#64748b' }}>
+                            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
                     </div>
 
                     <div style={{
-                        padding: '0.5rem 1.25rem',
-                        borderRadius: '20px',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
-                        background: todayMarked ? '#dcfce7' : '#fef3c7',
-                        color: todayMarked ? '#166534' : '#92400e',
-                        border: `1px solid ${todayMarked ? '#86efac' : '#fde68a'}`
+                        padding: '0.6rem 1.4rem',
+                        borderRadius: '25px',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        background: todayRecord?.toLowerCase() === 'present' ? '#dcfce7' : todayRecord?.toLowerCase() === 'leave' ? '#fef3c7' : todayRecord?.toLowerCase() === 'absent' ? '#fee2e2' : '#f1f5f9',
+                        color: todayRecord?.toLowerCase() === 'present' ? '#166534' : todayRecord?.toLowerCase() === 'leave' ? '#92400e' : todayRecord?.toLowerCase() === 'absent' ? '#991b1b' : '#475569',
+                        border: `1px solid ${todayRecord?.toLowerCase() === 'present' ? '#86efac' : todayRecord?.toLowerCase() === 'leave' ? '#fde68a' : todayRecord?.toLowerCase() === 'absent' ? '#fca5a5' : '#cbd5e1'}`
                     }}>
-                        Today ({todayStr}): {todayMarked ? `Marked (${todayRecord})` : 'Pending Check-In'}
+                        Status: {todayRecord ? todayRecord : 'Not Marked Yet'}
                     </div>
                 </div>
 
-                {/* Status Feedback Notification */}
-                {punchStatus && (
-                    <div style={{
-                        padding: '1rem 1.25rem',
-                        borderRadius: '12px',
-                        marginBottom: '1.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        fontSize: '0.9rem',
-                        fontWeight: 500,
-                        background: punchStatus.type === 'success' ? '#ecfdf5' : '#fef2f2',
-                        color: punchStatus.type === 'success' ? '#065f46' : '#991b1b',
-                        border: `1px solid ${punchStatus.type === 'success' ? '#a7f3d0' : '#fecaca'}`
-                    }}>
-                        {punchStatus.type === 'success' ? <CheckCircle size={20} color="#10b981" /> : <AlertCircle size={20} color="#ef4444" />}
-                        <div>{punchStatus.message}</div>
+                <div style={{
+                    padding: '1rem 1.25rem',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    color: '#334155',
+                    fontSize: '0.88rem'
+                }}>
+                    <ShieldCheck size={22} color="#4f46e5" style={{ flexShrink: 0 }} />
+                    <div>
+                        <strong>Institutional Attendance Policy:</strong> Attendance is officially marked and verified by your Department Faculty and Academic Administration. Students cannot mark attendance themselves.
                     </div>
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                    <button
-                        onClick={handleMarkAttendance}
-                        disabled={isPunching || todayMarked}
-                        className={`btn btn-primary ${isPunching ? 'loading' : ''}`}
-                        style={{
-                            padding: '0.9rem 2.2rem',
-                            fontSize: '1rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            background: todayMarked ? '#94a3b8' : 'var(--color-primary)'
-                        }}
-                    >
-                        <CheckCircle size={18} />
-                        {isPunching ? 'Recording Attendance...' : todayMarked ? 'Attendance Marked for Today' : 'Mark Present for Today'}
-                    </button>
-
-                    {todayMarked && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>
-                            <ShieldCheck size={16} color="#10b981" />
-                            <span>Verified in Institutional Record</span>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -214,6 +142,13 @@ const StudentAttendance = () => {
                         <p className="text-muted">Absent Days</p>
                     </div>
                 </div>
+                <div className="card stat-card">
+                    <div className="stat-icon" style={{ background: '#fef3c7', color: '#92400e' }}><Calendar /></div>
+                    <div className="stat-info">
+                        <h3>{stats.leave}</h3>
+                        <p className="text-muted">Approved Leaves</p>
+                    </div>
+                </div>
             </div>
 
             {/* Attendance Log Table */}
@@ -231,7 +166,7 @@ const StudentAttendance = () => {
                             {attendanceRecords.length === 0 ? (
                                 <tr>
                                     <td colSpan="2" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--color-text-muted)' }}>
-                                        No attendance records found. Click the button above to mark today's attendance.
+                                        No attendance records found yet. Attendance will appear here once recorded by your department.
                                     </td>
                                 </tr>
                             ) : attendanceRecords.map((record, index) => (
