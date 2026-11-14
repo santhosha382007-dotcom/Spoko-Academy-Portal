@@ -5,12 +5,10 @@ import {
     BookOpen, CheckCircle, AlertCircle, FileText, Loader, RefreshCw
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
-import * as pdfjs from 'pdfjs-dist';
+import { pdfjs } from '../../utils/pdfWorkerSetup';
+import { parseQuestionsFromText } from '../../utils/questionParser';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-
-// Ensure PDF.js worker is properly configured
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`;
 
 const PDFImport = () => {
     const { user: currentUser } = useAuth();
@@ -33,110 +31,6 @@ const PDFImport = () => {
             setSelectedDepartment(staffDept);
         }
     }, [isStaff, staffDept]);
-
-    // -------------------------------------------------------------
-    // Smart Question Parser from Extracted PDF Text
-    // -------------------------------------------------------------
-    const parseQuestionsFromText = (rawText) => {
-        const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        const questions = [];
-        let currentQ = null;
-
-        // Regex patterns
-        const questionStartRegex = /^(?:Q(?:uestion)?\s*\.?\s*\d+|^\d+[\.\)]|\(\d+\))\s*(.*)/i;
-        const optionRegex = /^[A-Da-d][\.\)]\s*(.*)/;
-        const answerRegex = /^(?:Ans(?:wer)?|Correct\s*(?:Option)?)\s*[:\-\=]\s*([A-Da-d1-4])/i;
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-
-            // Match Question Start
-            const qMatch = line.match(questionStartRegex);
-            if (qMatch) {
-                if (currentQ && currentQ.text) {
-                    questions.push(finalizeQuestion(currentQ));
-                }
-                currentQ = {
-                    text: qMatch[1] || '',
-                    options: [],
-                    correctAnswer: 0,
-                    marks: 1,
-                    type: 'MCQ'
-                };
-                continue;
-            }
-
-            // Match Answer Line
-            const ansMatch = line.match(answerRegex);
-            if (ansMatch && currentQ) {
-                const ansChar = ansMatch[1].toUpperCase();
-                if (ansChar === 'A' || ansChar === '1') currentQ.correctAnswer = 0;
-                else if (ansChar === 'B' || ansChar === '2') currentQ.correctAnswer = 1;
-                else if (ansChar === 'C' || ansChar === '3') currentQ.correctAnswer = 2;
-                else if (ansChar === 'D' || ansChar === '4') currentQ.correctAnswer = 3;
-                continue;
-            }
-
-            // Match Option Line
-            const optMatch = line.match(optionRegex);
-            if (optMatch && currentQ) {
-                currentQ.options.push(optMatch[1] || line);
-                continue;
-            }
-
-            // Append multiline question text or option text
-            if (currentQ) {
-                if (currentQ.options.length === 0) {
-                    currentQ.text += (currentQ.text ? ' ' : '') + line;
-                } else {
-                    const lastIdx = currentQ.options.length - 1;
-                    currentQ.options[lastIdx] += ' ' + line;
-                }
-            }
-        }
-
-        if (currentQ && currentQ.text) {
-            questions.push(finalizeQuestion(currentQ));
-        }
-
-        // If standard regex didn't find enough formatted questions, fallback to sentence splitting
-        if (questions.length === 0) {
-            const sentences = rawText.split(/[.!?\n]/).filter(s => s.trim().length > 30);
-            sentences.slice(0, 15).forEach((sentence, idx) => {
-                questions.push({
-                    id: Date.now() + idx,
-                    text: sentence.trim(),
-                    options: [
-                        'Option A (Based on text)',
-                        'Option B (Based on text)',
-                        'Option C (Based on text)',
-                        'Option D (Based on text)'
-                    ],
-                    correctAnswer: 0,
-                    marks: 1,
-                    type: 'MCQ'
-                });
-            });
-        }
-
-        return questions;
-    };
-
-    const finalizeQuestion = (q) => {
-        // Ensure 4 options
-        const opts = [...q.options];
-        while (opts.length < 4) {
-            opts.push(`Option ${String.fromCharCode(65 + opts.length)}`);
-        }
-        return {
-            id: Date.now() + Math.random().toString(36).substring(2, 7),
-            text: q.text.trim(),
-            options: opts.slice(0, 4),
-            correctAnswer: q.correctAnswer || 0,
-            marks: q.marks || 1,
-            type: 'MCQ'
-        };
-    };
 
     // -------------------------------------------------------------
     // Extract PDF Text Page-by-Page

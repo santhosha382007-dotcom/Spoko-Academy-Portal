@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Upload, Plus, Trash2, X, Loader, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Plus, Trash2, X, Loader, Image as ImageIcon, Check } from 'lucide-react';
 import { api } from '../../services/api';
-import * as pdfjs from 'pdfjs-dist';
+import { pdfjs } from '../../utils/pdfWorkerSetup';
+import { parseQuestionsFromText } from '../../utils/questionParser';
 import mammoth from 'mammoth';
 import ImageCropper from '../../components/ImageCropper';
-
-// Initialize PDF.js worker - Using stable version 4.4.168
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`;
 
 const CreateExam = () => {
     const navigate = useNavigate();
@@ -41,6 +39,11 @@ const CreateExam = () => {
         subject: 'General'
     });
 
+    // Smart Document (PDF/DOCX) Question Separation & Review Modal States
+    const [docQuestionsToReview, setDocQuestionsToReview] = useState([]);
+    const [showDocReviewModal, setShowDocReviewModal] = useState(false);
+    const [docFileName, setDocFileName] = useState('');
+
     const [imageToCrop, setImageToCrop] = useState(null);
 
     const handleFileUpload = async (e) => {
@@ -52,7 +55,7 @@ const CreateExam = () => {
 
         try {
             let text = "";
-            if (file.type === "application/pdf") {
+            if (file.type === "application/pdf" || fileName.toLowerCase().endsWith('.pdf')) {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
                 let fullText = "";
@@ -62,57 +65,81 @@ const CreateExam = () => {
                     fullText += content.items.map(item => item.str).join(" ") + "\n";
                 }
                 text = fullText;
-            } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+            } else if (
+                file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+                fileName.toLowerCase().endsWith('.docx')
+            ) {
                 const arrayBuffer = await file.arrayBuffer();
                 const result = await mammoth.extractRawText({ arrayBuffer });
                 text = result.value;
             } else {
-                throw new Error("Unsupported file type. Please upload PDF or DOCX.");
+                throw new Error("Unsupported file type. Please upload a PDF or DOCX document.");
             }
 
-            // Simple AI Logic: Split text into sentences and find those that look like questions
-            const sentences = text.split(/[.!?\n]/).filter(s => s.trim().length > 20);
-            const extractedQuestions = [];
-
-            sentences.forEach((sentence, index) => {
-                const cleanText = sentence.trim();
-                // We'll limit to 50 questions for a new exam
-                if (extractedQuestions.length >= 50) return;
-
-                if (cleanText.includes('?') || cleanText.includes('யார்') || cleanText.includes('எது') || cleanText.length > 50) {
-                    extractedQuestions.push({
-                        id: Date.now() + Math.random(),
-                        text: cleanText,
-                        options: ['Option A', 'Option B', 'Option C', 'Option D'],
-                        correctAnswer: 0,
-                        subject: 'General'
-                    });
-                }
-            });
-
-            if (extractedQuestions.length === 0) {
-                extractedQuestions.push({
-                    id: Date.now(),
-                    text: `Content extracted from ${fileName}: ${text.substring(0, 100)}...`,
-                    options: ['True', 'False', 'Not Mentioned', 'None'],
-                    correctAnswer: 0,
-                    subject: 'General'
-                });
+            const parsed = parseQuestionsFromText(text);
+            if (!parsed || parsed.length === 0) {
+                alert(`No readable questions could be parsed from "${fileName}". Please ensure the file contains numbered questions and choices.`);
+                return;
             }
 
-            setExamData(prev => ({
-                ...prev,
-                questions: [...prev.questions, ...extractedQuestions]
-            }));
-
-            alert(`Successfully processed "${fileName}" and added ${extractedQuestions.length} questions to your exam.`);
+            setDocFileName(fileName);
+            setDocQuestionsToReview(parsed);
+            setShowDocReviewModal(true);
         } catch (err) {
             console.error("Extraction Error:", err);
-            alert("Failed to process document: " + err.message);
+            alert("Failed to process document: " + (err.message || err));
         } finally {
             setIsProcessing(false);
             e.target.value = '';
         }
+    };
+
+    const handleUpdateReviewQuestion = (index, field, value) => {
+        setDocQuestionsToReview(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], [field]: value };
+            return next;
+        });
+    };
+
+    const handleUpdateReviewOption = (qIndex, optIndex, value) => {
+        setDocQuestionsToReview(prev => {
+            const next = [...prev];
+            const updatedOpts = [...next[qIndex].options];
+            updatedOpts[optIndex] = value;
+            next[qIndex] = { ...next[qIndex], options: updatedOpts };
+            return next;
+        });
+    };
+
+    const handleDeleteReviewQuestion = (index) => {
+        setDocQuestionsToReview(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleImportReviewedQuestions = () => {
+        if (docQuestionsToReview.length === 0) {
+            alert('No questions to import.');
+            return;
+        }
+
+        const formatted = docQuestionsToReview.map((q, idx) => ({
+            id: q.id || (Date.now() + idx),
+            text: q.text.trim() || `Question ${idx + 1}`,
+            options: (q.options && q.options.length >= 2) ? q.options.slice(0, 4) : ['Option A', 'Option B', 'Option C', 'Option D'],
+            correctAnswer: (typeof q.correctAnswer === 'number' && q.correctAnswer >= 0 && q.correctAnswer <= 3) ? q.correctAnswer : 0,
+            type: 'MCQ',
+            marks: q.marks || 1,
+            subject: 'General'
+        }));
+
+        setExamData(prev => ({
+            ...prev,
+            questions: [...prev.questions, ...formatted]
+        }));
+
+        setShowDocReviewModal(false);
+        setDocQuestionsToReview([]);
+        alert(`Successfully imported ${formatted.length} verified questions from "${docFileName}"!`);
     };
 
     const handleAddManual = (e) => {
@@ -463,6 +490,148 @@ const CreateExam = () => {
                 </div>
             )}
 
+            {/* Smart Document Review & Answer Selector Modal */}
+            {showDocReviewModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content glass-panel animate-fade-in doc-review-modal" style={{ maxWidth: '850px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', padding: '1.5rem', overflow: 'hidden' }}>
+                        {/* Modal Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem', marginBottom: '1rem', flexShrink: 0 }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)' }}>
+                                    Review & Choose Correct Answers
+                                </h2>
+                                <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                    File: <strong style={{ color: '#0f172a' }}>{docFileName}</strong> &bull; Detected: <strong style={{ color: '#0284c7' }}>{docQuestionsToReview.length} Questions</strong>
+                                </p>
+                                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+                                    ✓ Tap the radio button next to each option (A, B, C, D) to choose the correct answer before adding to the exam.
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => setShowDocReviewModal(false)} className="btn-icon">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Questions Scrollable List */}
+                        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {docQuestionsToReview.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                                    All questions were removed.
+                                </div>
+                            ) : docQuestionsToReview.map((q, qIdx) => {
+                                const autoAnswerBadge = q.hasAutoAnswer ? (
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '6px' }}>
+                                        ✓ Auto-detected Key
+                                    </span>
+                                ) : null;
+
+                                return (
+                                    <div key={q.id || qIdx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontWeight: 800, fontSize: '0.85rem', background: '#0284c7', color: 'white', padding: '2px 8px', borderRadius: '6px' }}>
+                                                    Q{qIdx + 1}
+                                                </span>
+                                                {autoAnswerBadge}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteReviewQuestion(qIdx)}
+                                                className="btn-icon-sm"
+                                                style={{ color: '#ef4444', background: '#fee2e2' }}
+                                                title="Remove this question"
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        </div>
+
+                                        {/* Question Text */}
+                                        <div style={{ marginBottom: '0.75rem' }}>
+                                            <textarea
+                                                className="input-field"
+                                                rows="2"
+                                                value={q.text}
+                                                onChange={(e) => handleUpdateReviewQuestion(qIdx, 'text', e.target.value)}
+                                                style={{ margin: 0, fontSize: '0.9rem', width: '100%', background: 'white' }}
+                                            />
+                                        </div>
+
+                                        {/* Options with Radio Selection */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
+                                            {q.options.map((opt, optIdx) => {
+                                                const optLetter = String.fromCharCode(65 + optIdx);
+                                                const isCorrect = Number(q.correctAnswer) === optIdx;
+
+                                                return (
+                                                    <div
+                                                        key={optIdx}
+                                                        onClick={() => handleUpdateReviewQuestion(qIdx, 'correctAnswer', optIdx)}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.5rem',
+                                                            padding: '0.5rem 0.75rem',
+                                                            borderRadius: '8px',
+                                                            border: isCorrect ? '2px solid #10b981' : '1px solid #cbd5e1',
+                                                            background: isCorrect ? '#ecfdf5' : 'white',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            name={`review_correct_${q.id || qIdx}`}
+                                                            checked={isCorrect}
+                                                            onChange={() => handleUpdateReviewQuestion(qIdx, 'correctAnswer', optIdx)}
+                                                            style={{ cursor: 'pointer', accentColor: '#10b981' }}
+                                                        />
+                                                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isCorrect ? '#047857' : '#64748b' }}>
+                                                            {optLetter})
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            value={opt}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={(e) => handleUpdateReviewOption(qIdx, optIdx, e.target.value)}
+                                                            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.85rem', fontWeight: 500 }}
+                                                        />
+                                                        {isCorrect && (
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', background: '#d1fae5', padding: '1px 6px', borderRadius: '4px' }}>
+                                                                Correct
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border)', paddingTop: '1rem', marginTop: '1rem', flexShrink: 0, flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={() => setShowDocReviewModal(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleImportReviewedQuestions}
+                                disabled={docQuestionsToReview.length === 0}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, background: '#0284c7' }}
+                            >
+                                <Check size={18} /> Import All Verified Questions ({docQuestionsToReview.length})
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{`
                 .input-field {
                     width: 100%;
@@ -561,6 +730,10 @@ const CreateExam = () => {
                     }
                     .modal-content {
                         padding: 1.25rem 1rem;
+                    }
+                    .doc-review-modal {
+                        padding: 1rem 0.75rem !important;
+                        max-height: 96vh !important;
                     }
                 }
             `}</style>
