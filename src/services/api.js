@@ -1,4 +1,4 @@
-const CLOUD_API_URL = 'https://spoko-academy-portal-2.onrender.com';
+const CLOUD_API_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'https://spoko-academy-portal-2.onrender.com';
 const API_PORT = 3001;
 
 // Production Cloud API endpoint (hidden internally)
