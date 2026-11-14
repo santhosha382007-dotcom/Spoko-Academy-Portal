@@ -45,15 +45,74 @@ const ExamTaker = () => {
         answersRef.current = answers;
     }, [answers]);
 
+    // Helper: Fisher-Yates shuffle questions & options for Mock Tests per student
+    const prepareMockQuestions = (rawQuestions, studentId, targetExamId) => {
+        if (!rawQuestions || rawQuestions.length === 0) return [];
+
+        const sessionKey = `spoko_mock_session_${targetExamId}_${studentId}`;
+        try {
+            const stored = sessionStorage.getItem(sessionKey);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length === rawQuestions.length) {
+                    return parsed;
+                }
+            }
+        } catch (e) {}
+
+        // Clone questions array
+        const shuffledQuestions = [...rawQuestions];
+        for (let i = shuffledQuestions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
+        }
+
+        // Shuffle options for each question while tracking original index
+        const finalizedQuestions = shuffledQuestions.map(q => {
+            if (!q.options || !Array.isArray(q.options) || q.options.length === 0) {
+                return q;
+            }
+
+            const mappedOptions = q.options.map((optText, origIdx) => ({
+                text: optText,
+                origIdx: origIdx
+            }));
+
+            for (let i = mappedOptions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [mappedOptions[i], mappedOptions[j]] = [mappedOptions[j], mappedOptions[i]];
+            }
+
+            return {
+                ...q,
+                displayOptions: mappedOptions
+            };
+        });
+
+        try {
+            sessionStorage.setItem(sessionKey, JSON.stringify(finalizedQuestions));
+        } catch (e) {}
+
+        return finalizedQuestions;
+    };
+
     useEffect(() => {
         const loadExam = async () => {
             setIsLoading(true);
             try {
                 const foundExam = await api.getExamById(examId);
                 if (foundExam) {
+                    let finalQuestions = foundExam.questions || [];
+                    const isMock = String(foundExam.category || '').toLowerCase() === 'mock test' || 
+                                   String(foundExam.title || '').toLowerCase().includes('mock');
+
+                    if (isMock && finalQuestions.length > 0) {
+                        finalQuestions = prepareMockQuestions(finalQuestions, user?.id || 'guest', examId);
+                    }
+
                     setExam(foundExam);
                     setTimeLeft(foundExam.duration * 60);
-                    setQuestions(foundExam.questions || []);
+                    setQuestions(finalQuestions);
                     setMaxViolations(foundExam.max_security_violations || 3);
                 } else {
                     setError("Assessment not found or has been archived.");
@@ -66,7 +125,7 @@ const ExamTaker = () => {
             }
         };
         loadExam();
-    }, [examId]);
+    }, [examId, user?.id]);
 
     // Timer Logic
     useEffect(() => {
@@ -305,7 +364,7 @@ const ExamTaker = () => {
                         return {
                             id: q.id || (idx + 1),
                             questionIndex: idx + 1,
-                            question: q.question,
+                            question: q.text || q.question,
                             options: q.options || [],
                             userAnswer: isAttempted ? Number(userAns) : null,
                             correctAnswer: Number(q.correctAnswer),
@@ -317,9 +376,10 @@ const ExamTaker = () => {
                 }
                 setCalculatedResult(res);
                 setExamStage('submitted');
-                // Clean up local recovery backup
+                // Clean up local recovery backup and mock session
                 try {
                     localStorage.removeItem(`spoko_answers_${examId}_${user.id}`);
+                    sessionStorage.removeItem(`spoko_mock_session_${examId}_${user.id}`);
                 } catch (e) { }
             } else {
                 throw new Error(response.message || "Calculation failed on server.");
@@ -340,7 +400,7 @@ const ExamTaker = () => {
                 return {
                     id: q.id || (idx + 1),
                     questionIndex: idx + 1,
-                    question: q.question,
+                    question: q.text || q.question,
                     options: q.options || [],
                     userAnswer: isAttempted ? Number(userAns) : null,
                     correctAnswer: Number(q.correctAnswer),
@@ -349,6 +409,10 @@ const ExamTaker = () => {
                     explanation: q.explanation || ''
                 };
             });
+            try {
+                localStorage.removeItem(`spoko_answers_${examId}_${user.id}`);
+                sessionStorage.removeItem(`spoko_mock_session_${examId}_${user.id}`);
+            } catch (e) { }
             const scorePct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
             const passingScore = exam?.passingMarks || 50;
             setCalculatedResult({
@@ -1395,21 +1459,24 @@ const ExamTaker = () => {
 
                         {(!currentQ.type || currentQ.type === 'MCQ') ? (
                             <div className="exam-mcq-list">
-                                {currentQ.options && currentQ.options.map((opt, i) => (
-                                    <div
-                                        key={i}
-                                        onClick={() => handleAnswerChange(currentQ.id, i)}
-                                        className={`exam-option-item ${answers[currentQ.id] === i ? 'selected' : ''}`}
-                                    >
-                                        <div className="option-indicator-circle">
-                                            {answers[currentQ.id] === i && <Check size={14} color="white" />}
+                                {(currentQ.displayOptions || (currentQ.options || []).map((opt, idx) => ({ text: opt, origIdx: idx }))).map((optObj, i) => {
+                                    const isSelected = answers[currentQ.id] === optObj.origIdx;
+                                    return (
+                                        <div
+                                            key={i}
+                                            onClick={() => handleAnswerChange(currentQ.id, optObj.origIdx)}
+                                            className={`exam-option-item ${isSelected ? 'selected' : ''}`}
+                                        >
+                                            <div className="option-indicator-circle">
+                                                {isSelected && <Check size={14} color="white" />}
+                                            </div>
+                                            <div className="option-text-wrap">
+                                                <span className="option-prefix-label">{String.fromCharCode(65 + i)}.</span>
+                                                {optObj.text}
+                                            </div>
                                         </div>
-                                        <div className="option-text-wrap">
-                                            <span className="option-prefix-label">{String.fromCharCode(65 + i)}.</span>
-                                            {opt}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div style={{ marginBottom: '2rem' }}>

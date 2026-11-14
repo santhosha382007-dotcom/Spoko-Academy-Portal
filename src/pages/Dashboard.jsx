@@ -794,8 +794,13 @@ const AdminView = ({ exams, results, users, departments = [], attendance, onDele
 };
 
 const StudentView = ({ exams, results, user, announcements, attendance = {} }) => {
-    const myDept = user?.department || user?.details?.department || 'General';
-    const recommended = exams.filter(e => !e.department || e.department === 'All' || e.department === myDept).slice(0, 4);
+    const myDepts = (user?.departments && user.departments.length > 0) ? user.departments : [user?.department || user?.details?.department || 'General'];
+    const recommended = exams.filter(e => 
+        !e.department || 
+        e.department === 'All' || 
+        e.department === 'Generic' || 
+        myDepts.some(d => String(d).toLowerCase().trim() === String(e.department).toLowerCase().trim())
+    ).slice(0, 4);
     const myResults = results.slice(0, 5);
     const completedCount = results.length;
     const avgScore = completedCount > 0 ? Math.round(results.reduce((acc, curr) => acc + (curr.score || 0), 0) / completedCount) : 0;
@@ -1163,36 +1168,88 @@ const StaffView = ({ user, users = [], exams = [], results = [], departments = [
             </div>
 
             {/* Question Import Banner */}
-            <div style={{
-                background: 'linear-gradient(135deg, #312e81 0%, #4338ca 100%)',
-                borderRadius: '16px',
-                padding: '1.75rem 2rem',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1.5rem',
-                marginBottom: '2rem'
-            }}>
-                <div>
+            <div className="staff-portal-banner">
+                <div className="portal-banner-content">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
                         <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{myDept} Question Portal</span>
                     </div>
-                    <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.4rem', fontWeight: 800 }}>Import Question Bank Papers</h2>
-                    <p style={{ margin: 0, color: '#c7d2fe', fontSize: '0.9rem', maxWidth: '500px' }}>
+                    <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.35rem', fontWeight: 800 }}>Import Question Bank Papers</h2>
+                    <p style={{ margin: 0, color: '#c7d2fe', fontSize: '0.88rem', maxWidth: '520px', lineHeight: 1.5 }}>
                         Upload PDF exam question sheets directly into the {myDept} Question Bank with automatic question & option detection.
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <Link to="/staff/questions" className="btn" style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
+                <div className="portal-banner-actions">
+                    <Link to="/staff/questions" className="btn portal-btn-secondary">
                         <BookOpen size={16} /> Open Question Bank
                     </Link>
-                    <Link to="/staff/import-questions" className="btn btn-primary" style={{ background: '#7c3aed', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Link to="/staff/import-questions" className="btn portal-btn-primary">
                         <FileUp size={16} /> Import PDF Questions
                     </Link>
                 </div>
             </div>
+
+            <style>{`
+                .staff-portal-banner {
+                    background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);
+                    border-radius: 16px;
+                    padding: 1.5rem 1.75rem;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 1.25rem;
+                    margin-bottom: 2rem;
+                    box-shadow: 0 10px 25px -5px rgba(67, 56, 202, 0.3);
+                }
+                .portal-banner-actions {
+                    display: flex;
+                    gap: 0.75rem;
+                    flex-wrap: wrap;
+                }
+                .portal-btn-secondary {
+                    background: rgba(255,255,255,0.15);
+                    color: white;
+                    border: 1px solid rgba(255,255,255,0.3);
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    padding: 0.65rem 1.25rem;
+                    border-radius: 10px;
+                }
+                .portal-btn-primary {
+                    background: #7c3aed;
+                    color: white;
+                    border: 1px solid transparent;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-weight: 700;
+                    text-decoration: none;
+                    padding: 0.65rem 1.25rem;
+                    border-radius: 10px;
+                }
+                @media (max-width: 640px) {
+                    .staff-portal-banner {
+                        padding: 1.25rem 1rem;
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                    .portal-banner-actions {
+                        flex-direction: column;
+                        width: 100%;
+                    }
+                    .portal-btn-secondary,
+                    .portal-btn-primary {
+                        width: 100%;
+                        justify-content: center;
+                        text-align: center;
+                        box-sizing: border-box;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

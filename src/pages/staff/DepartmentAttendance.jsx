@@ -92,12 +92,14 @@ const DepartmentAttendance = ({ forcedDepartment = null, embedded = false }) => 
         }
     };
 
-    // Filter students specifically belonging to selected department
+    // Filter students specifically belonging to selected department (supports students in up to 2 departments)
     const departmentStudents = useMemo(() => {
         const cleanDept = String(selectedDepartment || '').toLowerCase().trim().replace(/s$/, '');
         return allStudents.filter(u => {
             const uDept = String(u.department || u.details?.department || '').toLowerCase().trim().replace(/s$/, '');
+            const uDepts = Array.isArray(u.departments) ? u.departments.map(d => String(d).toLowerCase().trim().replace(/s$/, '')) : [];
             return uDept === cleanDept || 
+                   uDepts.includes(cleanDept) ||
                    (cleanDept === 'gd' && uDept.includes('gd')) || 
                    (cleanDept.includes('gd') && uDept === 'gd') ||
                    (uDept && uDept === String(selectedDepartment).toLowerCase().trim());

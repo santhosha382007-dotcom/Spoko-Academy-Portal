@@ -181,44 +181,46 @@ const StudentReport = () => {
                     </div>
 
                     {/* Recent Exam History */}
-                    <div className="card mt-4" style={{ padding: '1.5rem' }}>
+                    <div className="card mt-4" style={{ padding: '1.5rem', overflow: 'hidden' }}>
                         <div className="flex-between mb-4">
                             <h3 className="flex-center gap-2"><Clock size={20} /> Recent Exam Attempts</h3>
                         </div>
                         {results.length === 0 ? (
                             <div className="text-center p-4 text-muted">No exams taken yet.</div>
                         ) : (
-                            <table className="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Exam Name</th>
-                                        <th>Date</th>
-                                        <th>Score</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {[...results].reverse().map((res, i) => (
-                                        <tr key={i}>
-                                            <td>{res.examTitle}</td>
-                                            <td>{new Date(res.timestamp).toLocaleDateString()}</td>
-                                            <td>
-                                                <div className="flex-center gap-2">
-                                                    <span className="progress-bg" style={{ width: '60px' }}>
-                                                        <span className="progress-fill" style={{ width: `${res.score}%`, background: res.score >= 50 ? '#10b981' : '#ef4444' }}></span>
-                                                    </span>
-                                                    <span style={{ fontWeight: 600 }}>{res.score}%</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${res.score >= 50 ? 'badge-success' : 'badge-danger'}`}>
-                                                    {res.score >= 50 ? 'Pass' : 'Fail'}
-                                                </span>
-                                            </td>
+                            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+                                <table className="data-table" style={{ minWidth: '480px', width: '100%' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Exam Name</th>
+                                            <th>Date</th>
+                                            <th>Score</th>
+                                            <th>Status</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {[...results].reverse().map((res, i) => (
+                                            <tr key={i}>
+                                                <td>{res.examTitle}</td>
+                                                <td>{new Date(res.timestamp).toLocaleDateString()}</td>
+                                                <td>
+                                                    <div className="flex-center gap-2">
+                                                        <span className="progress-bg" style={{ width: '60px' }}>
+                                                            <span className="progress-fill" style={{ width: `${res.score}%`, background: res.score >= 50 ? '#10b981' : '#ef4444' }}></span>
+                                                        </span>
+                                                        <span style={{ fontWeight: 600 }}>{res.score}%</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span className={`badge ${res.score >= 50 ? 'badge-success' : 'badge-danger'}`}>
+                                                        {res.score >= 50 ? 'Pass' : 'Fail'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -362,6 +364,18 @@ const StudentReport = () => {
                 @media (max-width: 992px) {
                     .report-grid { grid-template-columns: 1fr; }
                     .grid-cols-3 { grid-template-columns: 1fr; }
+                }
+                @media (max-width: 640px) {
+                    .report-container {
+                        overflow-x: hidden;
+                        width: 100%;
+                    }
+                    .profile-card {
+                        padding: 1.25rem 1rem;
+                    }
+                    .grid-cols-2 {
+                        grid-template-columns: 1fr;
+                    }
                 }
             `}</style>
         </div>

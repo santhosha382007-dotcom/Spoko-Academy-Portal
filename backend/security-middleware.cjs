@@ -69,6 +69,49 @@ module.exports = async (req, res, next) => {
     }
 
     // -------------------------------------------------------------
+    // USER REGISTRATION / DUAL-DEPARTMENT ENROLLMENT HANDLER
+    // Supports students studying in up to 2 departments with the same Student ID
+    // -------------------------------------------------------------
+    if ((req.url === '/users' || req.url.startsWith('/users?')) && req.method === 'POST') {
+        try {
+            const body = await getRequestBody(req);
+            const db = getDb();
+            const cleanId = String(body.id || body.studentId || '').trim();
+            const targetDept = String(body.department || body.details?.department || 'General').trim();
+
+            if (body.role === 'student' && cleanId) {
+                // Find all existing records for this student ID or phone
+                const existingMatches = (db.users || []).filter(u => 
+                    u.role === 'student' && (
+                        String(u.id).toLowerCase().trim() === cleanId.toLowerCase() ||
+                        String(u.details?.studentId || u.studentId || '').toLowerCase().trim() === cleanId.toLowerCase() ||
+                        String(u.id).toLowerCase().trim().split('_')[0] === cleanId.toLowerCase()
+                    )
+                );
+
+                // If this is a valid 2nd department enrollment
+                if (existingMatches.length === 1) {
+                    const firstDept = String(existingMatches[0].department || existingMatches[0].details?.department || '').trim();
+                    if (firstDept.toLowerCase() !== targetDept.toLowerCase()) {
+                        // Safe internal primary key for database storage
+                        const deptSuffix = targetDept.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        body.id = `${cleanId}_${deptSuffix}`;
+                        body.studentId = cleanId;
+                        if (body.details) body.details.studentId = cleanId;
+                        req.body = body;
+                    }
+                } else if (existingMatches.length === 0) {
+                    body.studentId = cleanId;
+                    if (body.details) body.details.studentId = cleanId;
+                    req.body = body;
+                }
+            }
+        } catch (e) {
+            console.error('[SECURITY MIDDLEWARE USER POST ERROR]', e);
+        }
+    }
+
+    // -------------------------------------------------------------
     // 1. ATTENDANCE VERIFICATION (GPS Verification Removed)
     // -------------------------------------------------------------
     if (req.url.startsWith('/api/attendance/verify-location') && req.method === 'POST') {
@@ -101,11 +144,29 @@ module.exports = async (req, res, next) => {
                 return res.status(404).jsonp({ allowed: false, message: "Assessment does not exist or is currently inactive." });
             }
 
-            // Check department assignment
-            const studentDept = user.department || user.details?.department || 'General';
-            if (exam.department && exam.department !== 'Generic' && exam.department !== 'All' && exam.department !== studentDept) {
-                // If not assigned to this department
-                // allow if user is admin, else block
+            // Check department assignment (supports students enrolled in up to 2 departments)
+            const cleanStudentBaseId = String(user.details?.studentId || user.studentId || user.id || '').split('_')[0].toLowerCase().trim();
+            const studentDepts = (db.users || [])
+                .filter(u => u.role === 'student' && (
+                    String(u.id).toLowerCase().trim() === String(user.id).toLowerCase().trim() ||
+                    String(u.id).toLowerCase().trim().split('_')[0] === cleanStudentBaseId ||
+                    (user.phone && String(u.phone).trim() === String(user.phone).trim())
+                ))
+                .map(u => String(u.department || u.details?.department || 'General').toLowerCase().trim());
+            
+            if (user.department) studentDepts.push(String(user.department).toLowerCase().trim());
+            if (user.details?.department) studentDepts.push(String(user.details.department).toLowerCase().trim());
+            if (Array.isArray(user.departments)) {
+                user.departments.forEach(d => studentDepts.push(String(d).toLowerCase().trim()));
+            }
+
+            const examDeptClean = String(exam.department || '').toLowerCase().trim();
+            const isEnrolledInExamDept = examDeptClean === '' || 
+                                         examDeptClean === 'generic' || 
+                                         examDeptClean === 'all' || 
+                                         studentDepts.includes(examDeptClean);
+
+            if (!isEnrolledInExamDept) {
                 if (user.role !== 'admin') {
                     return res.status(403).jsonp({ allowed: false, message: `This assessment is reserved for ${exam.department} Department students.` });
                 }

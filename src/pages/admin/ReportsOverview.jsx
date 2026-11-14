@@ -159,8 +159,12 @@ const ReportsOverview = () => {
                     No student records found matching filters.
                 </div>
             ) : (
-                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <table className="data-table">
+                <div className="card table-responsive-wrapper" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
+                    <div className="mobile-scroll-hint" style={{ padding: '0.6rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>👉</span>
+                        <span>Swipe horizontally to view full student report metrics and actions.</span>
+                    </div>
+                    <table className="data-table" style={{ minWidth: '780px', width: '100%' }}>
                         <thead>
                             <tr>
                                 <th>Student Details</th>

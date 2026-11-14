@@ -144,7 +144,7 @@ const UsersList = () => {
         const instructionsData = [
             { 'Item': 'Template Revision', 'Guideline': 'Spoko Portal Version 1.1 • Admin-only management + bulk onboarding.' },
             { 'Item': 'Required Fields', 'Guideline': 'Student ID, Student Name, Mobile Number, Department, and Default Password are MANDATORY.' },
-            { 'Item': 'Student ID', 'Guideline': 'Unique identifier for each student (e.g. STU1001). Must not duplicate existing records.' },
+            { 'Item': 'Student ID', 'Guideline': 'Identifier for each student (e.g. STU1001). Students studying in 2 departments may appear twice with the same ID under different departments.' },
             { 'Item': 'Mobile Number', 'Guideline': 'Must be a valid 10-digit mobile number. Used for identity verification.' },
             { 'Item': 'Department', 'Guideline': 'Mandatory. Must match one of the active departments in the Department Reference sheet.' },
             { 'Item': 'Security Policy', 'Guideline': 'The database stores only a secure password hash. Passwords are never stored as plain text.' },
@@ -217,9 +217,9 @@ const UsersList = () => {
                 const existingIds = new Set(users.map(u => String(u.id).toLowerCase().trim()));
                 const existingPhones = new Set(users.map(u => String(u.phone).trim()));
 
-                // In-file duplicate trackers
-                const seenFileIds = new Set();
-                const seenFilePhones = new Set();
+                // In-file duplicate trackers (students can study in up to 2 departments)
+                const seenFileIdEntries = new Map(); // id -> [ { rowNum, department } ]
+                const seenFilePhoneEntries = new Map(); // phone -> [ { rowNum, department } ]
 
                 const processed = rawJson.map((row, index) => {
                     const rowNum = index + 2; // Excel row numbering
@@ -250,23 +250,31 @@ const UsersList = () => {
                         errors.push(`Invalid mobile format: "${mobile}" (must be 10 digits)`);
                     }
 
-                    // 3. Duplicate mobile in file
+                    // 3. Mobile tracking in file (Allows up to 2 different departments for same student)
                     if (mobile) {
-                        if (seenFilePhones.has(mobile)) {
-                            errors.push(`Duplicate mobile within import file: ${mobile}`);
-                        } else {
-                            seenFilePhones.add(mobile);
+                        const existingPhoneList = seenFilePhoneEntries.get(mobile) || [];
+                        const sameDeptPhone = existingPhoneList.find(e => e.department.toLowerCase().trim() === department.toLowerCase().trim());
+                        if (sameDeptPhone) {
+                            errors.push(`Duplicate mobile within import file for the same department "${department}" (Row ${sameDeptPhone.rowNum} & Row ${rowNum}).`);
+                        } else if (existingPhoneList.length >= 2) {
+                            errors.push(`Mobile number ${mobile} appears ${existingPhoneList.length + 1} times in file (maximum 2 departments allowed).`);
                         }
+                        existingPhoneList.push({ rowNum, department, studentId });
+                        seenFilePhoneEntries.set(mobile, existingPhoneList);
                     }
 
-                    // 4. Duplicate Student ID in file
+                    // 4. Duplicate Student ID tracking in file (Allows up to 2 different departments)
                     if (studentId) {
-                        const lowerId = studentId.toLowerCase();
-                        if (seenFileIds.has(lowerId)) {
-                            errors.push(`Duplicate Student ID within import file: ${studentId}`);
-                        } else {
-                            seenFileIds.add(lowerId);
+                        const lowerId = studentId.toLowerCase().trim();
+                        const existingIdList = seenFileIdEntries.get(lowerId) || [];
+                        const sameDeptId = existingIdList.find(e => e.department.toLowerCase().trim() === department.toLowerCase().trim());
+                        if (sameDeptId) {
+                            errors.push(`Duplicate Student ID "${studentId}" within import file for the same department "${department}" (Row ${sameDeptId.rowNum} & Row ${rowNum}).`);
+                        } else if (existingIdList.length >= 2) {
+                            errors.push(`Student ID "${studentId}" is repeated ${existingIdList.length + 1} times in file (maximum 2 departments allowed).`);
                         }
+                        existingIdList.push({ rowNum, department, studentId });
+                        seenFileIdEntries.set(lowerId, existingIdList);
                     }
 
                     // 5. Unknown department validation
@@ -282,16 +290,48 @@ const UsersList = () => {
                         errors.push("Password policy violation: Default password must be at least 6 characters.");
                     }
 
-                    // 7. Existing student conflict check
-                    const isExistingId = studentId && existingIds.has(studentId.toLowerCase());
-                    const isExistingPhone = mobile && existingPhones.has(mobile);
-                    let isConflict = false;
+                    // 7. Existing student conflict check & 2-department enrollment in database
+                    const dbMatchesForId = users.filter(u => 
+                        u.role === 'student' && (
+                            String(u.id).toLowerCase().trim() === studentId.toLowerCase().trim() ||
+                            String(u.details?.studentId || u.studentId || '').toLowerCase().trim() === studentId.toLowerCase().trim() ||
+                            String(u.id).toLowerCase().trim().split('_')[0] === studentId.toLowerCase().trim()
+                        )
+                    );
+                    const dbMatchesForPhone = users.filter(u => 
+                        u.role === 'student' && String(u.phone).trim() === mobile
+                    );
 
-                    if (isExistingId) {
-                        isConflict = true;
+                    let isConflict = false;
+                    let isSecondDepartment = false;
+
+                    if (dbMatchesForId.length > 0) {
+                        const enrolledDepts = dbMatchesForId.map(u => String(u.department || u.details?.department || '').toLowerCase().trim());
+                        const isSameDept = enrolledDepts.includes(department.toLowerCase().trim());
+
+                        if (isSameDept) {
+                            // Same ID + Same department in database -> existing record update conflict
+                            isConflict = true;
+                        } else if (dbMatchesForId.length >= 2) {
+                            // Already in 2 departments in database
+                            errors.push(`Student ID "${studentId}" is already enrolled in 2 departments in database (${enrolledDepts.join(', ')}).`);
+                        } else {
+                            // Enrolled in 1 department, now enrolling into 2nd department -> COMPLETELY VALID!
+                            isSecondDepartment = true;
+                            isConflict = false;
+                        }
                     }
-                    if (isExistingPhone && !isExistingId) {
-                        errors.push(`Mobile number ${mobile} already belongs to an existing student in database.`);
+
+                    // Check phone conflict with OTHER students
+                    if (mobile && dbMatchesForPhone.length > 0) {
+                        const isSameStudent = dbMatchesForPhone.some(u => 
+                            String(u.id).toLowerCase().trim() === studentId.toLowerCase().trim() ||
+                            String(u.details?.studentId || u.studentId || '').toLowerCase().trim() === studentId.toLowerCase().trim() ||
+                            String(u.id).toLowerCase().trim().split('_')[0] === studentId.toLowerCase().trim()
+                        );
+                        if (!isSameStudent) {
+                            errors.push(`Mobile number ${mobile} is already registered to a different student in database.`);
+                        }
                     }
 
                     return {
@@ -308,6 +348,7 @@ const UsersList = () => {
                         accountStatus,
                         errors,
                         isConflict,
+                        isSecondDepartment,
                         isValid: errors.length === 0
                     };
                 });
@@ -354,25 +395,42 @@ const UsersList = () => {
 
             let createdCount = 0;
             let updatedCount = 0;
+            const createdIdsThisBatch = new Set();
 
             for (const r of rowsToImport) {
                 const hashedPassword = hashPassword(r.defaultPassword);
+                const cleanStudentId = String(r.studentId).trim();
+                const targetDept = String(r.department).trim();
+
+                // Check if this primary ID is already taken in the database or earlier in this batch
+                const isIdTaken = createdIdsThisBatch.has(cleanStudentId.toLowerCase()) || 
+                                  (users || []).some(u => String(u.id).toLowerCase().trim() === cleanStudentId.toLowerCase());
+                
+                let assignedDbId = cleanStudentId;
+                if (isIdTaken && !r.isConflict) {
+                    // Safe primary key for second department
+                    const deptSuffix = targetDept.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    assignedDbId = `${cleanStudentId}_${deptSuffix}`;
+                }
+                createdIdsThisBatch.add(assignedDbId.toLowerCase());
+
                 const userPayload = {
-                    id: r.studentId,
+                    id: assignedDbId,
+                    studentId: cleanStudentId,
                     name: r.studentName,
                     phone: r.mobile,
-                    department: r.department,
+                    department: targetDept,
                     password: hashedPassword,
                     role: 'student',
                     status: (r.accountStatus.toLowerCase() === 'inactive' || r.accountStatus.toLowerCase() === 'blocked') ? r.accountStatus.toLowerCase() : 'active',
                     firstLoginPasswordChange: r.firstLoginChange,
                     avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.studentName)}&background=random`,
                     details: {
-                        studentId: r.studentId,
+                        studentId: cleanStudentId,
                         fullName: r.studentName,
                         phone: r.mobile,
                         email: r.email,
-                        department: r.department,
+                        department: targetDept,
                         batch: r.batch,
                         dob: r.dob,
                         firstLoginPasswordChange: r.firstLoginChange,
@@ -381,7 +439,7 @@ const UsersList = () => {
                 };
 
                 if (r.isConflict && allowOverwrite) {
-                    await api.updateUser(r.studentId, userPayload);
+                    await api.updateUser(assignedDbId, userPayload);
                     updatedCount++;
                 } else {
                     await api.createUser(userPayload);
@@ -431,24 +489,65 @@ const UsersList = () => {
         setIsSubmitting(true);
         try {
             const allUsers = await api.getUsers();
-            if (allUsers.some(u => String(u.phone).trim() === cleanPhone)) {
-                alert("A student already exists with this mobile number!");
+            const targetDept = newStudent.department || departments[0]?.name || 'General';
+
+            const existingWithId = allUsers.filter(u => 
+                u.role === 'student' && (
+                    String(u.id).toLowerCase().trim() === cleanId.toLowerCase() ||
+                    String(u.details?.studentId || u.studentId || '').toLowerCase().trim() === cleanId.toLowerCase() ||
+                    String(u.id).toLowerCase().trim().split('_')[0] === cleanId.toLowerCase()
+                )
+            );
+            const existingWithPhone = allUsers.filter(u => 
+                u.role === 'student' && String(u.phone).trim() === cleanPhone
+            );
+
+            // Maximum 2 departments permitted per student
+            if (existingWithId.length >= 2) {
+                const enrolledDepts = existingWithId.map(u => u.department || u.details?.department || 'Unknown').join(', ');
+                alert(`Student ID "${cleanId}" is already enrolled in 2 departments (${enrolledDepts}).\n\nStudents in our academy can be enrolled in up to 2 departments.`);
                 setIsSubmitting(false);
                 return;
             }
-            if (allUsers.some(u => String(u.id).trim().toLowerCase() === cleanId.toLowerCase())) {
-                alert(`A student already exists with Student ID "${cleanId}"!`);
+
+            // Cannot enroll in the exact same department twice
+            const sameDeptMatch = existingWithId.find(u => 
+                String(u.department || u.details?.department || '').toLowerCase().trim() === targetDept.toLowerCase().trim()
+            );
+            if (sameDeptMatch) {
+                alert(`A student with Student ID "${cleanId}" is already enrolled in the "${targetDept}" department.`);
                 setIsSubmitting(false);
                 return;
+            }
+
+            // Mobile number cannot belong to a different student ID
+            if (existingWithPhone.length > 0) {
+                const isSameStudent = existingWithPhone.some(u => 
+                    String(u.id).toLowerCase().trim() === cleanId.toLowerCase() ||
+                    String(u.details?.studentId || u.studentId || '').toLowerCase().trim() === cleanId.toLowerCase() ||
+                    String(u.id).toLowerCase().trim().split('_')[0] === cleanId.toLowerCase()
+                );
+                if (!isSameStudent) {
+                    alert(`Mobile number ${cleanPhone} is already registered to a different student.`);
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
+            let assignedDbId = cleanId;
+            if (existingWithId.length === 1 || allUsers.some(u => String(u.id).toLowerCase().trim() === cleanId.toLowerCase())) {
+                // Secondary department enrollment: safe unique lowdb ID with department suffix
+                assignedDbId = `${cleanId}_${targetDept.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
             }
 
             const hashedPassword = hashPassword(newStudent.password);
 
             const createdUser = {
-                id: cleanId,
+                id: assignedDbId,
+                studentId: cleanId,
                 name: newStudent.fullName.trim(),
                 phone: cleanPhone,
-                department: newStudent.department || departments[0]?.name || 'General',
+                department: targetDept,
                 password: hashedPassword,
                 role: 'student',
                 status: 'active',
@@ -459,7 +558,7 @@ const UsersList = () => {
                     fullName: newStudent.fullName.trim(),
                     phone: cleanPhone,
                     email: newStudent.email.trim(),
-                    department: newStudent.department || departments[0]?.name || 'General',
+                    department: targetDept,
                     batch: newStudent.batch || '2026-A',
                     dob: newStudent.dob || '',
                     avatar: newStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(newStudent.fullName.trim())}&background=random`,
@@ -478,7 +577,11 @@ const UsersList = () => {
                 details: `Admin created student ${createdUser.name} (${cleanId}). Temporary password hashed, first-login change enforced.`
             });
 
-            alert(`Student "${newStudent.fullName}" created successfully with temporary default password: ${newStudent.password}`);
+            if (existingWithId.length === 1) {
+                alert(`Student "${newStudent.fullName}" (ID: ${cleanId}) successfully enrolled into 2nd department: "${targetDept}"!`);
+            } else {
+                alert(`Student "${newStudent.fullName}" created successfully with temporary default password: ${newStudent.password}`);
+            }
             setShowAddModal(false);
             setNewStudent({
                 studentId: '',
@@ -948,15 +1051,19 @@ const UsersList = () => {
 
             {/* Students Table */}
             {activeTab === 'students' && (
-                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <table className="data-table">
+                <div className="card table-responsive-wrapper" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
+                    <div className="mobile-scroll-hint" style={{ padding: '0.6rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>👉</span>
+                        <span>Swipe horizontally to view full table, Reset Password, Edit, Block, and Delete actions.</span>
+                    </div>
+                    <table className="data-table" style={{ minWidth: '820px', width: '100%' }}>
                         <thead>
                             <tr>
                                 <th>Student Details</th>
                                 <th>Department & Batch</th>
                                 <th>First-Login Password</th>
                                 <th>Account Status</th>
-                                <th>Actions</th>
+                                <th style={{ textAlign: 'right', paddingRight: '1.25rem' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -964,27 +1071,40 @@ const UsersList = () => {
                                 <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem' }}><Loader className="spin" /> Loading students...</td></tr>
                             ) : currentUsers.length === 0 ? (
                                 <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No students found matching filters.</td></tr>
-                            ) : currentUsers.map(student => (
-                                <tr key={student.id}>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <div className="avatar-sm" style={{ background: '#7c3aed', color: 'white', fontWeight: 700 }}>
-                                                {student.name?.[0]?.toUpperCase() || 'S'}
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: 700, color: '#0f172a' }}>{student.name}</div>
-                                                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: '0.5rem' }}>
-                                                    <span>ID: <strong>{student.id}</strong></span>
-                                                    <span>•</span>
-                                                    <span>📱 {student.phone}</span>
+                            ) : currentUsers.map(student => {
+                                const cleanBaseId = String(student.details?.studentId || student.studentId || student.id).split('_')[0];
+                                const isDualDeptStudent = users.filter(u => 
+                                    u.role === 'student' && 
+                                    (String(u.id).toLowerCase().trim().split('_')[0] === cleanBaseId.toLowerCase() || 
+                                     String(u.details?.studentId || u.studentId || '').toLowerCase().trim() === cleanBaseId.toLowerCase())
+                                ).length > 1;
+
+                                return (
+                                    <tr key={student.id}>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <div className="avatar-sm" style={{ background: '#7c3aed', color: 'white', fontWeight: 700 }}>
+                                                    {student.name?.[0]?.toUpperCase() || 'S'}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 700, color: '#0f172a' }}>{student.name}</div>
+                                                    <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                        <span>ID: <strong>{cleanBaseId}</strong></span>
+                                                        <span>•</span>
+                                                        <span>📱 {student.phone}</span>
+                                                        {isDualDeptStudent && (
+                                                            <span style={{ background: '#ede9fe', color: '#6d28d9', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                                                Dual Dept
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style={{ fontWeight: 600 }}>{student.details?.department || 'Unassigned'}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Batch: {student.details?.batch || '-'}</div>
-                                    </td>
+                                        </td>
+                                        <td>
+                                            <div style={{ fontWeight: 600 }}>{student.department || student.details?.department || 'Unassigned'}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Batch: {student.details?.batch || '-'}</div>
+                                        </td>
                                     <td>
                                         {student.firstLoginPasswordChange ? (
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fffbeb', color: '#b45309', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #fde68a' }}>
@@ -1002,8 +1122,8 @@ const UsersList = () => {
                                             {student.status || 'active'}
                                         </span>
                                     </td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                    <td style={{ textAlign: 'right', paddingRight: '1.25rem' }}>
+                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                                             <button
                                                 onClick={() => initiatePasswordReset(student)}
                                                 className="btn-icon-sm"
@@ -1057,7 +1177,8 @@ const UsersList = () => {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            );
+                        })}
                         </tbody>
                     </table>
                 </div>
@@ -1065,8 +1186,12 @@ const UsersList = () => {
 
             {/* Department Staff Table */}
             {activeTab === 'staff' && (
-                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <table className="data-table">
+                <div className="card table-responsive-wrapper" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
+                    <div className="mobile-scroll-hint" style={{ padding: '0.6rem 1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>👉</span>
+                        <span>Swipe horizontally to view full table, Reset Password, Block/Activate, and Delete actions.</span>
+                    </div>
+                    <table className="data-table" style={{ minWidth: '860px', width: '100%' }}>
                         <thead>
                             <tr>
                                 <th>Staff Member</th>
@@ -1074,7 +1199,7 @@ const UsersList = () => {
                                 <th>Login Credentials (ID / Phone)</th>
                                 <th>Email</th>
                                 <th>Status</th>
-                                <th>Actions</th>
+                                <th style={{ textAlign: 'right', paddingRight: '1.25rem' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1119,8 +1244,8 @@ const UsersList = () => {
                                             {staff.status || 'active'}
                                         </span>
                                     </td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                    <td style={{ textAlign: 'right', paddingRight: '1.25rem' }}>
+                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                                             <button
                                                 onClick={() => initiatePasswordReset(staff)}
                                                 className="btn-icon-sm"
@@ -1560,6 +1685,10 @@ const UsersList = () => {
                                                     <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
                                                         ERROR
                                                     </span>
+                                                ) : r.isSecondDepartment ? (
+                                                    <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
+                                                        2ND DEPT (VALID)
+                                                    </span>
                                                 ) : r.isConflict ? (
                                                     <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800 }}>
                                                         CONFLICT
@@ -1581,6 +1710,10 @@ const UsersList = () => {
                                                             <li key={eIdx}>{err}</li>
                                                         ))}
                                                     </ul>
+                                                ) : r.isSecondDepartment ? (
+                                                    <span style={{ color: '#6d28d9', fontSize: '0.78rem', fontWeight: 700 }}>
+                                                        ✓ Enrolling in 2nd Department (Dual-Study Allowed)
+                                                    </span>
                                                 ) : r.isConflict ? (
                                                     <span style={{ color: '#b45309', fontSize: '0.78rem', fontWeight: 600 }}>
                                                         {allowOverwrite ? "Will update existing student" : "Skipped unless update allowed"}

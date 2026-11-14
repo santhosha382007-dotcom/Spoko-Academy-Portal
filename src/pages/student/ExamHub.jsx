@@ -37,12 +37,13 @@ const ExamHub = () => {
         fetchDashboardData();
     }, [user?.id]);
 
-    const userDept = user?.details?.department || 'General';
+    const userDept = user?.department || user?.details?.department || 'General';
+    const myDepts = (user?.departments && user.departments.length > 0) ? user.departments : [userDept];
 
-    // Show exams relevant to student or generic
+    // Show exams relevant to student or generic (supports students in up to 2 departments)
     const assignedExams = exams.filter(exam => {
         if (!exam.department || exam.department === 'Generic' || exam.department === 'All') return true;
-        if (exam.department === userDept) return true;
+        if (myDepts.some(d => String(d).toLowerCase().trim() === String(exam.department).toLowerCase().trim())) return true;
         if (user?.role === 'admin') return true;
         return false;
     });
@@ -61,7 +62,7 @@ const ExamHub = () => {
                     <div>
                         <h1 style={{ margin: 0 }}>Assessment Center</h1>
                         <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-                            Secure Examination Portal • Department: <strong>{userDept}</strong>
+                            Secure Examination Portal • Department: <strong>{myDepts.join(' & ')}</strong>
                         </p>
                     </div>
                 </div>

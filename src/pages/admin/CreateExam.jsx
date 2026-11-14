@@ -236,7 +236,7 @@ const CreateExam = () => {
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                        <div className="exam-meta-grid">
                             <div className="form-group">
                                 <label>Duration (minutes) *</label>
                                 <input
@@ -302,10 +302,10 @@ const CreateExam = () => {
 
                 {step === 2 && (
                     <div className="step-content animate-fade-in">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <div className="step-2-header">
                             <h2>Step 2: Add Questions</h2>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <div style={{ position: 'relative' }}>
+                            <div className="step-2-buttons">
+                                <div style={{ position: 'relative', flex: 1 }}>
                                     <input
                                         type="file"
                                         id="exam-doc-upload"
@@ -313,12 +313,12 @@ const CreateExam = () => {
                                         accept=".pdf,.doc,.docx"
                                         onChange={handleFileUpload}
                                     />
-                                    <label htmlFor="exam-doc-upload" className={`btn btn-outline ${isProcessing ? 'disabled' : ''}`} style={{ cursor: 'pointer', fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
+                                    <label htmlFor="exam-doc-upload" className={`btn btn-outline ${isProcessing ? 'disabled' : ''}`} style={{ cursor: 'pointer', fontSize: '0.9rem', padding: '0.6rem 1rem', width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         {isProcessing ? <Loader className="spin" size={16} /> : <Upload size={16} />}
                                         {isProcessing ? ' Analyzing...' : ' Upload Doc'}
                                     </label>
                                 </div>
-                                <button className="btn btn-outline" onClick={() => setShowForm(true)} style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
+                                <button className="btn btn-outline" onClick={() => setShowForm(true)} style={{ fontSize: '0.9rem', padding: '0.6rem 1rem', flex: 1, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <Plus size={16} /> Add Manual
                                 </button>
                             </div>
@@ -327,21 +327,21 @@ const CreateExam = () => {
                         {/* Questions List */}
                         <div className="questions-selection-list">
                             {examData.questions.length === 0 ? (
-                                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                    <p>No questions added yet.</p>
-                                    <p style={{ fontSize: '0.9rem' }}>Upload a document or add questions manually to populate this exam.</p>
+                                <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                    <p style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.5rem' }}>No questions added yet.</p>
+                                    <p style={{ fontSize: '0.88rem' }}>Upload a document or tap "Add Manual" above to populate questions for this assessment.</p>
                                 </div>
                             ) : examData.questions.map((q, idx) => (
                                 <div key={q.id} className="question-item icon-hover-container">
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, marginBottom: '0.25rem', wordBreak: 'break-word' }}>
                                             <span className="badge" style={{ marginRight: '0.5rem', fontSize: '0.75rem' }}>Q{idx + 1}</span>
                                             {q.text}
                                         </div>
                                         {q.image && (
                                             <img src={q.image} alt="Question" style={{ maxHeight: '60px', borderRadius: '4px', display: 'block', margin: '0.25rem 0' }} />
                                         )}
-                                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                                        <div className="text-muted" style={{ fontSize: '0.85rem', wordBreak: 'break-word' }}>
                                             {(!q.type || q.type === 'MCQ') ? 
                                                 `Options: ${q.options.join(', ')} (Ans: ${q.options[q.correctAnswer]})`
                                                 : 
@@ -349,19 +349,20 @@ const CreateExam = () => {
                                             }
                                         </div>
                                     </div>
-                                    <button onClick={() => handleDeleteQuestion(q.id)} className="btn-icon-sm text-danger">
+                                    <button onClick={() => handleDeleteQuestion(q.id)} className="btn-icon-sm text-danger" style={{ flexShrink: 0 }}>
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
+                        <div className="step-nav-footer">
                             <button className="btn btn-outline" onClick={() => setStep(1)}>Back</button>
                             <button
                                 className="btn btn-primary"
                                 onClick={handleSave}
                                 disabled={examData.questions.length === 0}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                             >
                                 <Save size={18} /> Publish Exam ({examData.questions.length} Qs)
                             </button>
@@ -469,18 +470,47 @@ const CreateExam = () => {
                     border: 1px solid var(--color-border);
                     border-radius: var(--radius-md);
                     margin-top: 0.5rem;
+                    box-sizing: border-box;
+                }
+                .exam-meta-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 1rem;
+                }
+                .step-2-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1rem;
+                    margin-bottom: 1.25rem;
+                    flex-wrap: wrap;
+                }
+                .step-2-buttons {
+                    display: flex;
+                    gap: 0.75rem;
+                    align-items: center;
+                }
+                .step-nav-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1rem;
+                    margin-top: 2rem;
+                    flex-wrap: wrap;
                 }
                 .questions-selection-list {
                     height: 400px;
+                    max-height: 50vh;
                     overflow-y: auto;
                     border: 1px solid var(--color-border);
                     border-radius: var(--radius-lg);
                     background: rgba(255,255,255,0.5);
+                    -webkit-overflow-scrolling: touch;
                 }
                 .question-item {
                     display: flex;
                     align-items: flex-start;
-                    gap: 1rem;
+                    gap: 0.75rem;
                     padding: 1rem;
                     border-bottom: 1px solid var(--color-border);
                 }
@@ -494,14 +524,45 @@ const CreateExam = () => {
                     background: rgba(0,0,0,0.5);
                     display: flex; align-items: center; justify-content: center;
                     z-index: 1000; backdrop-filter: blur(4px);
+                    padding: 1rem;
                 }
                 .modal-content {
-                    width: 90%; max-width: 500px;
-                    background: white; padding: 2rem;
+                    width: 100%; max-width: 550px;
+                    background: white; padding: 1.75rem;
                     border-radius: var(--radius-lg);
+                    box-sizing: border-box;
                 }
                 .spin { animation: spin 1s linear infinite; }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+                @media (max-width: 640px) {
+                    .exam-meta-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    .step-2-header {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 0.75rem;
+                    }
+                    .step-2-buttons {
+                        width: 100%;
+                        display: flex;
+                        gap: 0.5rem;
+                    }
+                    .step-2-buttons > * {
+                        flex: 1;
+                    }
+                    .step-nav-footer {
+                        flex-direction: column-reverse;
+                        width: 100%;
+                    }
+                    .step-nav-footer button {
+                        width: 100%;
+                    }
+                    .modal-content {
+                        padding: 1.25rem 1rem;
+                    }
+                }
             `}</style>
         </div>
     );

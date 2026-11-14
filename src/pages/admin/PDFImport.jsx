@@ -299,6 +299,7 @@ const PDFImport = () => {
                 <div style={{ maxWidth: '680px', margin: '2rem auto' }}>
                     <div
                         {...getRootProps()}
+                        className="pdf-dropzone"
                         style={{
                             border: '3px dashed #cbd5e1',
                             borderRadius: '24px',
@@ -526,27 +527,39 @@ const PDFImport = () => {
                         <strong>{savedCount}</strong> questions have been verified and added to the <strong>{selectedDepartment}</strong> Question Bank. They are now available to include in exams.
                     </p>
 
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <button
                             onClick={() => {
                                 setStage('upload');
                                 setExtractedQuestions([]);
                             }}
                             className="btn btn-outline"
-                            style={{ flex: 1 }}
+                            style={{ flex: 1, minWidth: '140px' }}
                         >
                             Import Another PDF
                         </button>
                         <Link
                             to={isStaff ? "/staff/questions" : "/admin/questions"}
                             className="btn btn-primary"
-                            style={{ flex: 1, background: '#7c3aed', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ flex: 1, minWidth: '140px', background: '#7c3aed', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                             View Question Bank
                         </Link>
                     </div>
                 </div>
             )}
+
+            <style>{`
+                @media (max-width: 640px) {
+                    .pdf-dropzone {
+                        padding: 2rem 1rem !important;
+                    }
+                    .pdf-control-bar {
+                        flex-direction: column !important;
+                        align-items: stretch !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

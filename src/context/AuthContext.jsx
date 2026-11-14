@@ -105,16 +105,24 @@ export const AuthProvider = ({ children }) => {
             const inputClean = String(identifier).trim().toLowerCase();
             const inputNoSpecial = inputClean.replace(/[-_\s\/]/g, '');
 
-            let candidate = users.find(u => {
+            // Collect all matching candidates (supports dual-department students who have up to 2 records)
+            const matchingCandidates = users.filter(u => {
                 const uId = String(u.id || '').trim().toLowerCase();
+                const uStudentId = String(u.details?.studentId || u.studentId || '').trim().toLowerCase();
                 const uPhone = String(u.phone || '').trim().toLowerCase();
                 const uEmail = String(u.details?.email || u.email || '').trim().toLowerCase();
                 const uName = String(u.name || '').trim().toLowerCase();
-                return (uId && (uId === inputClean || uId.replace(/[-_\s\/]/g, '') === inputNoSpecial)) || 
+                return (uId && (uId === inputClean || uId.replace(/[-_\s\/]/g, '') === inputNoSpecial || uId.split('_')[0] === inputClean)) || 
+                       (uStudentId && (uStudentId === inputClean || uStudentId.replace(/[-_\s\/]/g, '') === inputNoSpecial)) ||
                        (uPhone && uPhone === inputClean) || 
                        (uEmail && uEmail === inputClean) || 
                        (uName && uName === inputClean);
             });
+
+            let candidate = matchingCandidates.find(c => {
+                const storedPass = String(c.password || '').trim();
+                return verifyPassword(String(password).trim(), storedPass);
+            }) || matchingCandidates[0];
 
             // Friendly staff identification fallback:
             // Allows logging in with 'staff', 'faculty', department name ('railway', 'ssc', etc.), or 'staff_<dept>'
@@ -236,10 +244,19 @@ export const AuthProvider = ({ children }) => {
             const rawRole = String(candidate.role || 'student').toLowerCase().trim();
             const normalizedRole = (rawRole === 'faculty') ? 'staff' : rawRole;
 
+            // Collect all enrolled departments if candidate is a student in multiple departments (up to 2)
+            const enrolledDepts = Array.from(new Set(
+                (matchingCandidates || [candidate])
+                    .filter(c => c.role === 'student')
+                    .map(c => c.department || c.details?.department)
+                    .filter(Boolean)
+            ));
+
             const sessionUser = {
                 ...candidate,
                 role: normalizedRole,
-                firstLoginPasswordChange: mustChange
+                firstLoginPasswordChange: mustChange,
+                departments: enrolledDepts.length > 0 ? enrolledDepts : [candidate.department || candidate.details?.department || 'General']
             };
 
             setUser(sessionUser);
@@ -359,8 +376,28 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (details) => {
         const usersDb = await api.getUsers();
-        if (usersDb.find(u => u.phone === details.phone || u.id === details.studentId)) {
-            alert('User already exists with this phone number or Student ID!');
+        const cleanId = String(details.studentId || '').toLowerCase().trim();
+        const cleanPhone = String(details.phone || '').trim();
+        const targetDept = String(details.department || 'General').toLowerCase().trim();
+
+        const existingWithId = usersDb.filter(u => 
+            u.role === 'student' && (
+                String(u.id).toLowerCase().trim() === cleanId ||
+                String(u.details?.studentId || u.studentId || '').toLowerCase().trim() === cleanId ||
+                String(u.id).toLowerCase().trim().split('_')[0] === cleanId
+            )
+        );
+
+        if (existingWithId.length >= 2) {
+            alert('This Student ID is already enrolled in 2 departments (maximum 2 departments allowed).');
+            throw 'Exists';
+        }
+
+        const sameDeptMatch = existingWithId.find(u => 
+            String(u.department || u.details?.department || '').toLowerCase().trim() === targetDept
+        );
+        if (sameDeptMatch) {
+            alert(`A student is already registered with Student ID "${details.studentId}" in the ${details.department} department.`);
             throw 'Exists';
         }
 
