@@ -795,6 +795,7 @@ const AdminView = ({ exams, results, users, departments = [], attendance, onDele
 
 const StudentView = ({ exams, results, user, announcements, attendance = {} }) => {
     const myDepts = (user?.departments && user.departments.length > 0) ? user.departments : [user?.department || user?.details?.department || 'General'];
+    const myDept = myDepts.join(' & ') || user?.department || user?.details?.department || 'General';
     const recommended = exams.filter(e => 
         !e.department || 
         e.department === 'All' || 
