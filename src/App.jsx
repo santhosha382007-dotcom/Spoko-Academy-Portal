@@ -19,7 +19,6 @@ import Attendance from './pages/admin/Attendance';
 import LeaveManagement from './pages/admin/LeaveManagement';
 import CreateExam from './pages/admin/CreateExam';
 import QuestionBank from './pages/admin/QuestionBank';
-import PDFImport from './pages/admin/PDFImport';
 import ResultsAnalysis from './pages/admin/ResultsAnalysis';
 import ReportsOverview from './pages/admin/ReportsOverview';
 import StudentReport from './pages/admin/StudentReport';
@@ -143,11 +142,6 @@ function App() {
                         <QuestionBank />
                     </ProtectedRoute>
                 } />
-                <Route path="/admin/pdf-import" element={
-                    <ProtectedRoute allowedRoles={['admin', 'staff']}>
-                        <PDFImport />
-                    </ProtectedRoute>
-                } />
                 <Route path="/admin/results" element={
                     <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <ResultsAnalysis />
@@ -224,11 +218,6 @@ function App() {
                 <Route path="/staff/leave" element={
                     <ProtectedRoute allowedRoles={['staff', 'admin']}>
                         <DepartmentLeave />
-                    </ProtectedRoute>
-                } />
-                <Route path="/staff/import-questions" element={
-                    <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                        <PDFImport />
                     </ProtectedRoute>
                 } />
                 <Route path="/staff/questions" element={

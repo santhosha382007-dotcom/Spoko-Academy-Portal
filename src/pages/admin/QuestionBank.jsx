@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Upload, Plus, Trash2, Save, X, FileText, Loader, Edit2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, X, FileText, Edit2, Image as ImageIcon } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import * as pdfjs from 'pdfjs-dist';
-import mammoth from 'mammoth';
 import ImageCropper from '../../components/ImageCropper';
-
-// Initialize PDF.js worker - Using stable version 4.4.168
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`;
 
 const QuestionBank = () => {
     const { user: currentUser } = useAuth();
@@ -17,7 +12,6 @@ const QuestionBank = () => {
 
     const [questions, setQuestions] = useState([]);
     const [showForm, setShowForm] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
 
     // New Question Form State
     const [newQuestion, setNewQuestion] = useState({
@@ -48,88 +42,6 @@ const QuestionBank = () => {
         };
         fetchQuestions();
     }, []);
-
-    // Real Document Upload & Processing
-    const handleFileUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        setIsProcessing(true);
-        const fileName = file.name;
-
-        try {
-            let text = "";
-            if (file.type === "application/pdf") {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-                let fullText = "";
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    fullText += content.items.map(item => item.str).join(" ") + "\n";
-                }
-                text = fullText;
-            } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-                const arrayBuffer = await file.arrayBuffer();
-                const result = await mammoth.extractRawText({ arrayBuffer });
-                text = result.value;
-            } else {
-                throw new Error("Unsupported file type. Please upload PDF or DOCX.");
-            }
-
-            // Simple AI Logic: Split text into sentences and find those that look like questions
-            // or use common patterns to extract Q&A.
-            // For Tamil support, we look for '?' and common keywords.
-            const sentences = text.split(/[.!?\n]/).filter(s => s.trim().length > 20);
-            const extractedQuestions = [];
-
-            // Pattern Matcher for Questions
-            sentences.forEach((sentence, index) => {
-                const cleanText = sentence.trim();
-                if (extractedQuestions.length >= 10) return;
-
-                // Basic heuristic: Sentence ending in ? or containing "what/how/who" or Tamil equivalents
-                if (cleanText.includes('?') || cleanText.includes('யார்') || cleanText.includes('எது') || cleanText.length > 50) {
-                    extractedQuestions.push({
-                        text: cleanText,
-                        options: [
-                            'Option A (Based on text)',
-                            'Option B (Based on text)',
-                            'Option C (Based on text)',
-                            'Option D (Based on text)'
-                        ],
-                        correctAnswer: 0,
-                        subject: 'General'
-                    });
-                }
-            });
-
-            if (extractedQuestions.length === 0) {
-                // Fallback if no questions found
-                extractedQuestions.push({
-                    text: `Extracted summary from ${fileName}: ${text.substring(0, 100)}...`,
-                    options: ['True', 'False', 'Not Mentioned', 'None'],
-                    correctAnswer: 0,
-                    subject: 'General'
-                });
-            }
-
-            // Save to DB
-            for (const q of extractedQuestions) {
-                await api.createQuestion({ ...q, id: Date.now() + Math.random() });
-            }
-
-            const updated = await api.getQuestions();
-            setQuestions(updated);
-            alert(`Successfully processed "${fileName}" and extracted ${extractedQuestions.length} questions.`);
-        } catch (err) {
-            console.error("Extraction Error:", err);
-            alert("Failed to process document: " + err.message);
-        } finally {
-            setIsProcessing(false);
-            e.target.value = '';
-        }
-    };
 
     const [editingId, setEditingId] = useState(null);
 
@@ -225,28 +137,11 @@ const QuestionBank = () => {
                     <h1>{isStaff ? `${staffDept} Question Bank` : 'Question Bank'}</h1>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Link to={isStaff ? "/staff/import-questions" : "/admin/pdf-import"} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}>
-                        <Upload size={16} /> Bulk Import PDF
-                    </Link>
-
                     <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ background: '#7c3aed', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Plus size={16} /> Add Question
                     </button>
                 </div>
             </div>
-
-            {/* Processing Overlay */}
-            {isProcessing && (
-                <div className="processing-status card glass-panel animate-fade-in" style={{ marginBottom: '2rem', border: '1px solid var(--color-primary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div className="spinner"></div>
-                        <div>
-                            <h3 style={{ color: 'var(--color-primary)', marginBottom: '0.25rem' }}>AI Document Analysis in Progress...</h3>
-                            <p className="text-muted">Extracting concepts and generating multiple choice questions...</p>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {showForm && (
                 <div className="modal-overlay">
@@ -395,8 +290,8 @@ const QuestionBank = () => {
                                 <h3>{isStaff ? `No Questions in ${staffDept} Question Bank` : 'Question Bank is Empty'}</h3>
                                 <p className="text-muted">
                                     {isStaff 
-                                        ? `Upload a PDF exam sheet using Bulk Import to add questions for the ${staffDept} department.`
-                                        : 'Upload a course document (PDF/Word) to auto-generate questions or add them manually.'}
+                                        ? `Add questions for the ${staffDept} department manually using the Add Question button.`
+                                        : 'Add questions manually to the question bank using the Add Question button.'}
                                 </p>
                             </div>
                         ) : displayQuestions.map((q) => (

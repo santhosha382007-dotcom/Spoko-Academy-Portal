@@ -921,31 +921,5 @@ export const api = {
             console.warn("API CreateAuditLog non-blocking error:", e);
             return null;
         }
-    },
-
-    // -------------------------------------------------------------
-    // Question Import Batches (PDF Import Tracking)
-    // -------------------------------------------------------------
-    getQuestionImportBatches: async () => {
-        try {
-            const res = await fetchWithTimeout(`${getBaseUrl()}/question_import_batches`);
-            if (!res.ok) return [];
-            return await res.json();
-        } catch (e) {
-            return [];
-        }
-    },
-    createQuestionImportBatch: async (batch) => {
-        try {
-            const res = await fetchWithTimeout(`${getBaseUrl()}/question_import_batches`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(batch)
-            });
-            return await res.json();
-        } catch (e) {
-            console.error("API CreateQuestionImportBatch Error:", e);
-            return null;
-        }
     }
 };

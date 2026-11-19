@@ -237,11 +237,11 @@ const DepartmentStudents = () => {
                         <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh Roster
                     </button>
                     <Link 
-                        to="/staff/import-questions" 
+                        to="/staff/questions" 
                         className="btn btn-primary btn-sm"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                        <BookOpen size={14} /> Import Dept Questions
+                        <BookOpen size={14} /> Department Question Bank
                     </Link>
                 </div>
             </div>

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
     LogOut, LayoutDashboard, PlusCircle, CheckCircle, Menu, X, Users, Calendar, 
     TrendingUp, BarChart2, Bell, Settings, ClipboardList,
-    Building2, FileUp, CalendarCheck, ShieldCheck, History, Award, User as UserIcon,
+    Building2, CalendarCheck, ShieldCheck, History, Award, User as UserIcon,
     ChevronRight, ChevronLeft, Wifi, BookOpen
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -28,8 +28,6 @@ const getPageTitle = (pathname) => {
             return { title: 'Assessment Manager', subtitle: 'Author exams, schedules, and duration' };
         case '/admin/questions':
             return { title: 'Question Bank', subtitle: 'Curated question repository and categories' };
-        case '/admin/pdf-import':
-            return { title: 'PDF Question Import', subtitle: 'Automated AI/OCR question ingestion' };
         case '/admin/results':
             return { title: 'Performance Analytics', subtitle: 'Score breakdowns and class metrics' };
         case '/admin/reports':
@@ -50,8 +48,6 @@ const getPageTitle = (pathname) => {
             return { title: 'Department Attendance', subtitle: 'Mark and manage daily attendance for your department students' };
         case '/staff/leave':
             return { title: 'Department Leave Approvals', subtitle: 'Review and endorse departmental student leave requests' };
-        case '/staff/import-questions':
-            return { title: 'Department Question Import', subtitle: 'Upload and parse PDF question sheets for your department' };
         case '/staff/questions':
             return { title: 'Department Question Bank', subtitle: 'Manage curated questions for your department' };
         case '/staff/results':
@@ -196,10 +192,6 @@ const Layout = ({ children }) => {
                                 <ClipboardList size={19} className="nav-item-icon" />
                                 {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Question Bank</span>}
                             </Link>
-                            <Link to="/admin/pdf-import" className={`sidebar-nav-item ${isActive('/admin/pdf-import') ? 'active' : ''}`} title="PDF Import">
-                                <FileUp size={19} className="nav-item-icon" />
-                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">PDF Question Ingest</span>}
-                            </Link>
                             <Link to="/admin/results" className={`sidebar-nav-item ${isActive('/admin/results') ? 'active' : ''}`} title="Results">
                                 <BarChart2 size={19} className="nav-item-icon" />
                                 {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Analytics & Results</span>}
@@ -265,10 +257,6 @@ const Layout = ({ children }) => {
                             <Link to="/staff/leave" className={`sidebar-nav-item ${isActive('/staff/leave') ? 'active' : ''}`} title="Leave Approvals">
                                 <CalendarCheck size={19} className="nav-item-icon" />
                                 {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Leave Endorsements</span>}
-                            </Link>
-                            <Link to="/staff/import-questions" className={`sidebar-nav-item ${isActive('/staff/import-questions') ? 'active' : ''}`} title="Import Questions">
-                                <FileUp size={19} className="nav-item-icon" />
-                                {(!isCollapsed || isMobileMenuOpen) && <span className="nav-item-text">Import Questions (PDF)</span>}
                             </Link>
                             <Link to="/staff/questions" className={`sidebar-nav-item ${isActive('/staff/questions') ? 'active' : ''}`} title="Question Bank">
                                 <BookOpen size={19} className="nav-item-icon" />
@@ -412,9 +400,9 @@ const Layout = ({ children }) => {
                                 <Users size={20} />
                                 <span>Students</span>
                             </Link>
-                            <Link to="/staff/import-questions" className={`bottom-bar-link ${isActive('/staff/import-questions') ? 'active' : ''}`}>
-                                <FileUp size={20} />
-                                <span>Import</span>
+                            <Link to="/staff/attendance" className={`bottom-bar-link ${isActive('/staff/attendance') ? 'active' : ''}`}>
+                                <CalendarCheck size={20} />
+                                <span>Attendance</span>
                             </Link>
                             <Link to="/staff/questions" className={`bottom-bar-link ${isActive('/staff/questions') ? 'active' : ''}`}>
                                 <BookOpen size={20} />

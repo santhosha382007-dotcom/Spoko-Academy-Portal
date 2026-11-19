@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
     Users, CheckCircle, Award, Calendar, Trash2, ClipboardList, Send, Bell, 
     UserCheck, Shield, Smartphone, PlusCircle, ArrowRight, BookOpen, TrendingUp,
-    Building2, Activity, Clock, BarChart2, FileUp, Eye, CalendarCheck
+    Building2, Activity, Clock, BarChart2, Eye, CalendarCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
@@ -100,17 +100,6 @@ const AcademyActionHub = ({ user }) => {
                             <div className="tile-content">
                                 <h4>Department Students</h4>
                                 <p>Roster of {user?.department || 'your'} students</p>
-                            </div>
-                            <ArrowRight size={18} className="tile-arrow" />
-                        </Link>
-
-                        <Link to="/staff/import-questions" className="action-tile">
-                            <div className="tile-icon-box bg-indigo">
-                                <FileUp size={24} />
-                            </div>
-                            <div className="tile-content">
-                                <h4>Import Questions (PDF)</h4>
-                                <p>Bulk import PDF questions for {user?.department}</p>
                             </div>
                             <ArrowRight size={18} className="tile-arrow" />
                         </Link>
@@ -1168,23 +1157,20 @@ const StaffView = ({ user, users = [], exams = [], results = [], departments = [
                 )}
             </div>
 
-            {/* Question Import Banner */}
+            {/* Question Bank Banner */}
             <div className="staff-portal-banner">
                 <div className="portal-banner-content">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
                         <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>{myDept} Question Portal</span>
                     </div>
-                    <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.35rem', fontWeight: 800 }}>Import Question Bank Papers</h2>
+                    <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.35rem', fontWeight: 800 }}>Manage Question Bank</h2>
                     <p style={{ margin: 0, color: '#c7d2fe', fontSize: '0.88rem', maxWidth: '520px', lineHeight: 1.5 }}>
-                        Upload PDF exam question sheets directly into the {myDept} Question Bank with automatic question & option detection.
+                        Create and curate questions directly for the {myDept} Department Question Bank.
                     </p>
                 </div>
                 <div className="portal-banner-actions">
-                    <Link to="/staff/questions" className="btn portal-btn-secondary">
+                    <Link to="/staff/questions" className="btn portal-btn-primary">
                         <BookOpen size={16} /> Open Question Bank
-                    </Link>
-                    <Link to="/staff/import-questions" className="btn portal-btn-primary">
-                        <FileUp size={16} /> Import PDF Questions
                     </Link>
                 </div>
             </div>
