@@ -11,6 +11,47 @@ const dbPath = process.env.DB_PATH
         ? path.join(__dirname, 'db.json') 
         : path.join(__dirname, '..', 'db.json'));
 
+// Auto-seed database if db.json is missing or has zero users (e.g. fresh Render cloud deployment)
+function ensureDatabaseSeed() {
+    let needsSeed = false;
+    if (!fs.existsSync(dbPath)) {
+        needsSeed = true;
+    } else {
+        try {
+            const raw = fs.readFileSync(dbPath, 'utf8').trim();
+            if (!raw || raw === '{}') {
+                needsSeed = true;
+            } else {
+                const parsed = JSON.parse(raw);
+                if (!parsed.users || parsed.users.length === 0) {
+                    needsSeed = true;
+                }
+            }
+        } catch (e) {
+            needsSeed = true;
+        }
+    }
+
+    if (needsSeed) {
+        const seedCandidates = [
+            path.join(__dirname, 'db.seed.json'),
+            path.join(__dirname, '..', 'db.seed.json'),
+            path.join(__dirname, 'db.example.json'),
+            path.join(__dirname, '..', 'db.example.json')
+        ];
+        const foundSeed = seedCandidates.find(p => fs.existsSync(p));
+        if (foundSeed) {
+            try {
+                fs.copyFileSync(foundSeed, dbPath);
+                console.log(`[SEED] Initialized ${dbPath} from ${foundSeed}`);
+            } catch (err) {
+                console.error('[SEED ERROR]', err);
+            }
+        }
+    }
+}
+ensureDatabaseSeed();
+
 const router = jsonServer.router(dbPath);
 const middlewares = jsonServer.defaults({
     noCors: true // Handled by our custom hardened CORS middleware below
