@@ -1,0 +1,37 @@
+{
+  "users": [
+    {
+      "id": "admin",
+      "name": "Academy Administrator",
+      "phone": "admin",
+      "password": "$2a$10$wT1Y6l5wS0h4J1A9wE.B7uKqM9KxR9sD0xW8tC2lP6nQ9yB4mE8uK",
+      "role": "admin",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff",
+      "details": {}
+    }
+  ],
+  "exams": [],
+  "questions": [],
+  "results": [],
+  "attendance": [],
+  "schedules": [],
+  "requests": [],
+  "announcements": [],
+  "sessions": [],
+  "security_logs": [],
+  "assessment_attempts": [],
+  "attendance_records": [],
+  "location_settings": [],
+  "departments": [
+    { "id": 1, "name": "Railways", "code": "RLY" },
+    { "id": 2, "name": "SSC", "code": "SSC" },
+    { "id": 3, "name": "Banking", "code": "BNK" },
+    { "id": 4, "name": "TNPSC", "code": "TNPSC" },
+    { "id": 5, "name": "General", "code": "GEN" }
+  ],
+  "leave_requests": [],
+  "leave_balances": [],
+  "audit_logs": [],
+  "question_import_batches": []
+}

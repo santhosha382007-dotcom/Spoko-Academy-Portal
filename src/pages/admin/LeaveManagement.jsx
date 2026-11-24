@@ -48,10 +48,13 @@ const LeaveManagement = () => {
                 // AUTOMATICALLY MARK ATTENDANCE AS 'Leave' FOR ALL DATES IN RANGE
                 if (req?.startDate && req?.endDate && req?.userId) {
                     try {
-                        const start = new Date(req.startDate);
-                        const end = new Date(req.endDate);
+                        const start = new Date(req.startDate + 'T00:00:00');
+                        const end = new Date(req.endDate + 'T00:00:00');
                         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                            const dateStr = d.toISOString().split('T')[0];
+                            const y = d.getFullYear();
+                            const m = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const dateStr = `${y}-${m}-${day}`;
                             await api.saveAttendance(dateStr, { [req.userId]: 'Leave' }, true);
                         }
                     } catch (attErr) {

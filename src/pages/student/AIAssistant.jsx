@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, ArrowLeft, Settings, X, ShieldCheck, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/api';
 
 const AIAssistant = () => {
     const { user } = useAuth();
@@ -95,55 +96,24 @@ const AIAssistant = () => {
         setInput('');
         setIsTyping(true);
 
-        if (apiKey) {
-            try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: "gpt-3.5-turbo",
-                        messages: [
-                            {
-                                role: "system",
-                                content: `You are ${aiName}, a helpful AI study assistant for Spoko Academy. 
-                                The student's name is ${user?.name} and they are in the ${user?.details?.department || 'Railways'} department.
-                                Always be encouraging and provide study advice specific to their department when possible.`
-                            },
-                            { role: "user", content: textToSend }
-                        ]
-                    })
-                });
-
-                const data = await response.json();
-                if (response.ok && data.choices && data.choices[0]) {
-                    const botMsg = { id: Date.now() + 1, text: data.choices[0].message.content, sender: 'bot' };
-                    setMessages(prev => [...prev, botMsg]);
-                } else {
-                    const errorDetail = data?.error?.message || response.statusText || 'Unknown Error';
-                    throw new Error(errorDetail);
-                }
-            } catch (err) {
-                console.error("OpenAI API Error:", err);
-                const errorMsg = {
-                    id: Date.now() + 1,
-                    text: `AI Sync Error: "${err.message}". \n\nPlease verify your OpenAI account billing status or API key validity in settings.`,
-                    sender: 'bot'
-                };
-                setMessages(prev => [...prev, errorMsg]);
-            } finally {
-                setIsTyping(false);
-            }
-        } else {
-            // Fallback to Mock AI Response
-            setTimeout(() => {
-                const botResponseText = getMockAIResponse(textToSend);
-                const botMsg = { id: Date.now() + 1, text: botResponseText, sender: 'bot' };
-                setMessages(prev => [...prev, botMsg]);
-                setIsTyping(false);
-            }, 1200);
+        try {
+            const conversation = [
+                {
+                    role: 'system',
+                    content: `You are ${aiName}, a helpful AI study assistant for Spoko Academy. The student's name is ${user?.name} and they are in the ${user?.details?.department || 'Railways'} department.`
+                },
+                { role: 'user', content: textToSend }
+            ];
+            const reply = await api.askAI(conversation);
+            const botMsg = { id: Date.now() + 1, text: reply, sender: 'bot' };
+            setMessages(prev => [...prev, botMsg]);
+        } catch (err) {
+            console.warn('AI Assistant error, falling back to local tutor:', err);
+            const botResponseText = getMockAIResponse(textToSend);
+            const botMsg = { id: Date.now() + 1, text: botResponseText, sender: 'bot' };
+            setMessages(prev => [...prev, botMsg]);
+        } finally {
+            setIsTyping(false);
         }
     };
 
@@ -179,7 +149,7 @@ const AIAssistant = () => {
                     <h1>AI Assistant - <span style={{ color: 'var(--color-primary)' }}>{aiName}</span></h1>
                 </div>
                 <button onClick={() => setShowConfig(true)} className="btn btn-outline btn-sm" style={{ gap: '0.5rem' }}>
-                    <Settings size={16} /> {apiKey === GLOBAL_KEY ? 'Academy AI Active' : apiKey ? 'Personal AI Active' : 'Setup AI'}
+                    <Settings size={16} /> {'Academy AI Tutor'}
                 </button>
             </div>
 

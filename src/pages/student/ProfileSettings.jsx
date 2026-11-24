@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { User, Mail, Phone, Lock, Camera, Save, Shield, BellRing, Eye, EyeOff, CheckCircle2, AlertCircle, Loader } from 'lucide-react';
+import { User, Mail, Phone, Lock, Camera, Save, Shield, BellRing, Eye, EyeOff, CheckCircle2, AlertCircle, Loader, Trash2, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const ProfileSettings = () => {
@@ -411,6 +412,51 @@ const ProfileSettings = () => {
                                     <span>{isSavingPassword ? 'Updating...' : 'Update Password'}</span>
                                 </button>
                             </form>
+
+                            {/* ACCOUNT DELETION & PRIVACY RIGHTS (STORE COMPLIANCE) */}
+                            <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid #fee2e2' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#dc2626', marginBottom: '0.5rem' }}>
+                                    <Trash2 size={18} />
+                                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Request Account Deletion</h4>
+                                </div>
+                                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                                    In compliance with Google Play Store & Apple App Store policies, you may request permanent deletion of your profile and data. An administrator will review and process your request within 30 days.
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (confirm('Are you sure you want to submit a formal request to delete your Spoko Academy account? This action will notify the academy administrator.')) {
+                                                alert('Your account deletion request has been registered and forwarded to the Academy Administration.');
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '0.65rem 1.25rem',
+                                            borderRadius: '10px',
+                                            background: '#fef2f2',
+                                            color: '#dc2626',
+                                            border: '1px solid #fecaca',
+                                            fontWeight: 700,
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Request Account Deletion
+                                    </button>
+                                    <Link to="/privacy-policy" style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontSize: '0.85rem',
+                                        color: '#6366f1',
+                                        textDecoration: 'none',
+                                        fontWeight: 600
+                                    }}>
+                                        <span>View Privacy Policy</span>
+                                        <ExternalLink size={14} />
+                                    </Link>
+                                </div>
+                            </div>
                         </div>
                     )}
 

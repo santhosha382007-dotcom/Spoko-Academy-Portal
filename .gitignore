@@ -24,7 +24,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Database backup files
+# Database files (student records and snapshots)
+db.json
+backend/db.json
 db.backup.json
 db-*.json
 

@@ -13,25 +13,59 @@ const dbPath = process.env.DB_PATH
 
 const router = jsonServer.router(dbPath);
 const middlewares = jsonServer.defaults({
-    noCors: false
+    noCors: true // Handled by our custom hardened CORS middleware below
 });
 
 const port = process.env.PORT || 3001;
 
-// CORS headers for all origins (Web browsers, Render Cloud, Android APK, Electron Windows PC)
+// Explicit CORS Origin Allowlist for OWASP Compliance
+const ALLOWED_ORIGINS = [
+    'http://localhost:3008',
+    'http://localhost:5173',
+    'http://127.0.0.1:3008',
+    'http://127.0.0.1:5173',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'https://spoko-academy-portal-2.onrender.com',
+    'capacitor://localhost',
+    'http://localhost',
+    'ionic://localhost'
+];
+
+// Hardened CORS Middleware
 server.use((req, res, next) => {
-    const origin = req.headers.origin || '*';
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
+    const origin = req.headers.origin;
+
+    if (!origin) {
+        // Direct mobile / Electron / local requests without Origin header
+        res.header('Access-Control-Allow-Origin', '*');
+    } else {
+        const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+            origin.endsWith('.onrender.com') ||
+            origin.startsWith('http://localhost:') ||
+            origin.startsWith('http://127.0.0.1:');
+
+        if (isAllowed) {
+            res.header('Access-Control-Allow-Origin', origin);
+            res.header('Access-Control-Allow-Credentials', 'true');
+        } else {
+            // Disallowed external origin
+            if (req.method === 'OPTIONS') {
+                return res.status(403).json({ error: 'CORS Origin Not Allowed' });
+            }
+        }
+    }
+
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Spoko-Auth, Authorization');
+
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
     next();
 });
 
-// Root & Health Check Endpoints (For Render monitoring, pinging, and diagnostic verification)
+// Root & Health Check Endpoints
 server.get(['/', '/health'], (req, res) => {
     let dbStatus = 'connected';
     let usersCount = 0;
@@ -55,13 +89,13 @@ server.get(['/', '/health'], (req, res) => {
     });
 });
 
-// JSON body parser with generous limit (50MB) for exam imports, attachments, and base64 avatars
+// JSON body parser with generous limit (50MB) for exam imports and attachments
 server.use(jsonServer.bodyParser);
 
 // Standard json-server middlewares (logger, static, etc.)
 server.use(middlewares);
 
-// Custom security, assessment proctoring, and geo-fencing middleware
+// Custom security, authentication, RBAC, and assessment proctoring middleware
 server.use(securityMiddleware);
 
 // JSON-Server DB router

@@ -10,7 +10,7 @@ const SimVerificationModal = ({ user, onVerified, onCancel }) => {
     const [simSlot, setSimSlot] = useState('SIM Slot 1');
     const [carrierStatus, setCarrierStatus] = useState('Detecting SIM Carrier...');
 
-    const userPhone = user?.phone || user?.details?.phone || '8903366719';
+    const userPhone = user?.phone || user?.details?.phone || 'Registered Mobile';
 
     useEffect(() => {
         // Generate a 6-digit verification code
@@ -19,7 +19,7 @@ const SimVerificationModal = ({ user, onVerified, onCancel }) => {
 
         // Simulate mobile SIM carrier detection handshake
         const timer = setTimeout(() => {
-            setCarrierStatus('Airtel / Jio GSM Network (Verified)');
+            setCarrierStatus('Institutional Mobile Network (Verified)');
         }, 1200);
 
         return () => clearTimeout(timer);
@@ -29,8 +29,8 @@ const SimVerificationModal = ({ user, onVerified, onCancel }) => {
         e.preventDefault();
         setError('');
 
-        if (pin.trim() !== generatedOtp && pin.trim() !== '123456') {
-            setError(`Invalid SIM Security Code. Enter the code (${generatedOtp}) sent to SIM +91 ${userPhone}.`);
+        if (pin.trim() !== generatedOtp) {
+            setError(`Invalid verification code. Please check your messages and re-enter.`);
             return;
         }
 

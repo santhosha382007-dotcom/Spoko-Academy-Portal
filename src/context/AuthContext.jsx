@@ -26,48 +26,28 @@ export const AuthProvider = ({ children }) => {
 
     const [loading, setLoading] = useState(false);
 
-    // Background check to seed placeholder admin if empty, and validate existing session
+    // Validate active session against backend via signed token
     useEffect(() => {
-        const checkAndValidate = async () => {
-            try {
-                const users = await api.getUsers();
-                if (users.length === 0) {
-                    const placeholderAdmin = {
-                        id: 'admin',
-                        name: 'Administrator',
-                        phone: 'admin',
-                        password: hashPassword('admin'),
-                        role: 'admin',
-                        status: 'active',
-                        avatar: 'https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff',
-                        details: {}
-                    };
-                    await api.createUser(placeholderAdmin);
-                } else if (user) {
-                    // Invalidate stale local storage sessions if user was removed
-                    const exists = users.find(u => 
-                        (user.id && String(u.id).toLowerCase() === String(user.id).toLowerCase()) || 
-                        (user.phone && u.phone && String(u.phone).trim() === String(user.phone).trim())
-                    );
-                    if (!exists) {
+        const validateSession = async () => {
+            const token = localStorage.getItem('spoko_token');
+            if (token) {
+                try {
+                    const res = await api.getMe();
+                    if (res && res.user) {
+                        setUser(res.user);
+                        localStorage.setItem('spoko_user', JSON.stringify(res.user));
+                    } else {
                         logout();
-                    } else if (exists.status !== user.status || exists.firstLoginPasswordChange !== user.firstLoginPasswordChange) {
-                        // Keep user state in sync with database updates
-                        const updated = { 
-                            ...user, 
-                            status: exists.status, 
-                            firstLoginPasswordChange: exists.firstLoginPasswordChange,
-                            role: String(exists.role || user.role || 'student').toLowerCase().trim()
-                        };
-                        setUser(updated);
-                        localStorage.setItem('spoko_user', JSON.stringify(updated));
                     }
+                } catch (e) {
+                    // Invalidate if 401 Unauthorized or expired
+                    logout();
                 }
-            } catch (e) {
-                console.error("Auth check error", e);
+            } else if (user) {
+                logout();
             }
         };
-        checkAndValidate();
+        validateSession();
     }, []);
 
     // Generate or retrieve persistent device fingerprint
@@ -81,189 +61,36 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
-     * Authenticates ADMIN or STUDENT using Mobile number or Student ID / Identifier.
-     * Enforces secure bcrypt verification and first-login password-change detection.
+     * Authenticates ADMIN, STAFF or STUDENT using Mobile number or Student ID / Identifier.
+     * Enforces secure server-side verification and short-lived signed tokens.
      */
     const login = async (identifier, password) => {
         try {
             console.log(`[AUTH] Initiating security validation for: "${identifier}"`);
-            let users;
-            try {
-                users = await api.getUsers();
-            } catch (connErr) {
-                console.error("[AUTH] Database Connection Failure:", connErr);
-                alert('Cloud Connection Issue!\n\nUnable to reach the Spoko Academy Cloud Service.\n\nPlease check your internet connection or wait a few moments if the server is waking up.');
-                throw connErr;
+            const res = await api.login(identifier, password);
+            if (!res || !res.token || !res.user) {
+                throw new Error("Authentication failed");
             }
 
-            if (!users || users.length === 0) {
-                alert("Database is empty. Please contact the administrator.");
-                throw "EmptyDB";
-            }
+            const token = res.token;
+            const authenticatedUser = res.user;
 
-            // 1. Identify User by Student ID, Phone / Mobile Number, Email, Full Name, or Staff/Department
-            const inputClean = String(identifier).trim().toLowerCase();
-            const inputNoSpecial = inputClean.replace(/[-_\s\/]/g, '');
+            localStorage.setItem('spoko_token', token);
+            localStorage.setItem('spoko_user', JSON.stringify(authenticatedUser));
+            setUser(authenticatedUser);
 
-            // Collect all matching candidates (supports dual-department students who have up to 2 records)
-            const matchingCandidates = users.filter(u => {
-                const uId = String(u.id || '').trim().toLowerCase();
-                const uStudentId = String(u.details?.studentId || u.studentId || '').trim().toLowerCase();
-                const uPhone = String(u.phone || '').trim().toLowerCase();
-                const uEmail = String(u.details?.email || u.email || '').trim().toLowerCase();
-                const uName = String(u.name || '').trim().toLowerCase();
-                return (uId && (uId === inputClean || uId.replace(/[-_\s\/]/g, '') === inputNoSpecial || uId.split('_')[0] === inputClean)) || 
-                       (uStudentId && (uStudentId === inputClean || uStudentId.replace(/[-_\s\/]/g, '') === inputNoSpecial)) ||
-                       (uPhone && uPhone === inputClean) || 
-                       (uEmail && uEmail === inputClean) || 
-                       (uName && uName === inputClean);
-            });
-
-            let candidate = matchingCandidates.find(c => {
-                const storedPass = String(c.password || '').trim();
-                return verifyPassword(String(password).trim(), storedPass);
-            }) || matchingCandidates[0];
-
-            // Friendly staff identification fallback:
-            // Allows logging in with 'staff', 'faculty', department name ('railway', 'ssc', etc.), or 'staff_<dept>'
-            if (!candidate) {
-                if (inputClean === 'staff' || inputClean === 'faculty') {
-                    candidate = users.find(u => u.id === 'staff' || String(u.role).toLowerCase() === 'staff' || String(u.role).toLowerCase() === 'faculty');
-                } else {
-                    candidate = users.find(u => {
-                        const r = String(u.role || '').toLowerCase();
-                        if (r !== 'staff' && r !== 'faculty') return false;
-                        const uDept = String(u.department || u.details?.department || '').trim().toLowerCase().replace(/s$/, '');
-                        const cleanTest = inputClean.replace(/s$/, '');
-                        const testNoSpecial = inputNoSpecial.replace(/s$/, '');
-                        return uDept === cleanTest || 
-                               cleanTest === `staff_${uDept}` || 
-                               cleanTest === `${uDept}_staff` || 
-                               cleanTest === `${uDept} staff` ||
-                               testNoSpecial === `staff${uDept}` ||
-                               testNoSpecial === `${uDept}staff`;
-                    });
-                }
-            }
-
-            if (!candidate) {
-                await api.createSecurityLog({
-                    userId: identifier,
-                    eventType: 'LOGIN_FAILURE',
-                    status: 'FAILED',
-                    details: 'User account not found',
-                    userAgent: navigator.userAgent
-                });
-                throw 'Invalid';
-            }
-
-            // 2. Validate Password securely via bcrypt hash comparison
-            const inputPass = String(password).trim();
-            const storedPass = String(candidate.password || '').trim();
-            const isValid = verifyPassword(inputPass, storedPass);
-
-            if (!isValid) {
-                await api.createSecurityLog({
-                    userId: candidate.id,
-                    eventType: 'LOGIN_FAILURE',
-                    status: 'FAILED',
-                    details: 'Incorrect password entered',
-                    userAgent: navigator.userAgent
-                });
-                throw 'Invalid';
-            }
-
-            // Optional: If stored password was plain text legacy, silently upgrade to bcrypt hash
-            if (!storedPass.startsWith('$2a$') && !storedPass.startsWith('$2b$')) {
-                const secureHash = hashPassword(inputPass);
-                api.updateUser(candidate.id, { password: secureHash }).catch(() => {});
-            }
-
-            // 3. Validate Account Status
-            const status = String(candidate.status || 'active').toLowerCase();
-            if (status === 'blocked' || status === 'disabled' || status === 'suspended' || status === 'permanent_blocked' || status === 'left') {
-                const reason = candidate.blockReason || 'Account is currently disabled. Please contact the portal administrator.';
-                await api.createSecurityLog({
-                    userId: candidate.id,
-                    eventType: 'LOGIN_BLOCKED',
-                    status: 'BLOCKED',
-                    details: `Account access rejected due to status: ${status}. Reason: ${reason}`,
-                    userAgent: navigator.userAgent
-                });
-                throw 'Blocked';
-            }
-
-            // 4. Device Validation & Tracking (Enforced for Mobile; Bypassed on Windows per policy)
-            const currentDeviceId = getDeviceId();
-            if (!isWindowsPlatform() && candidate.registeredDeviceId && candidate.registeredDeviceId !== currentDeviceId && candidate.role === 'student' && candidate.restrictToSingleDevice) {
-                await api.createSecurityLog({
-                    userId: candidate.id,
-                    eventType: 'UNAUTHORIZED_DEVICE',
-                    status: 'BLOCKED',
-                    details: `Attempted login from unregistered device: ${currentDeviceId}`,
-                    userAgent: navigator.userAgent
-                });
-                throw 'UnauthorizedDevice';
-            }
-
-            // 5. Create Secure Session in Backend
-            const sessionToken = 'spoko_tok_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-            const sessionData = {
-                id: 'sess_' + Date.now(),
-                userId: candidate.id,
-                userRole: candidate.role,
-                userName: candidate.name,
-                token: sessionToken,
-                deviceId: currentDeviceId,
-                userAgent: navigator.userAgent,
-                ip: '127.0.0.1'
-            };
-
-            const createdSession = await api.createSession(sessionData).catch(() => null);
-            if (createdSession?.id) {
-                localStorage.setItem('spoko_session_id', createdSession.id);
-            }
-
-            // 6. Security Event Logging
-            await api.createSecurityLog({
-                userId: candidate.id,
-                eventType: 'LOGIN_SUCCESS',
-                status: 'ALLOWED',
-                details: `User successfully authenticated as ${candidate.role.toUpperCase()}`,
-                deviceId: currentDeviceId,
-                userAgent: navigator.userAgent
-            });
-
-            // 7. Update Session State
-            // Check if must change password on first login
-            const mustChange = candidate.role === 'student' && (
-                candidate.firstLoginPasswordChange === true || 
-                candidate.details?.firstLoginPasswordChange === true
-            );
-
-            const rawRole = String(candidate.role || 'student').toLowerCase().trim();
-            const normalizedRole = (rawRole === 'faculty') ? 'staff' : rawRole;
-
-            // Collect all enrolled departments if candidate is a student in multiple departments (up to 2)
-            const enrolledDepts = Array.from(new Set(
-                (matchingCandidates || [candidate])
-                    .filter(c => c.role === 'student')
-                    .map(c => c.department || c.details?.department)
-                    .filter(Boolean)
-            ));
-
-            const sessionUser = {
-                ...candidate,
-                role: normalizedRole,
-                firstLoginPasswordChange: mustChange,
-                departments: enrolledDepts.length > 0 ? enrolledDepts : [candidate.department || candidate.details?.department || 'General']
-            };
-
-            setUser(sessionUser);
-            localStorage.setItem('spoko_user', JSON.stringify(sessionUser));
-            return sessionUser;
+            return authenticatedUser;
         } catch (e) {
             console.error("Login Error", e);
+            const msg = String(e.message || e).toLowerCase();
+            if (msg.includes('restricted') || msg.includes('disabled') || msg.includes('blocked')) {
+                throw 'Blocked';
+            } else if (msg.includes('invalid') || msg.includes('not found') || msg.includes('incorrect') || msg.includes('password')) {
+                throw 'Invalid';
+            } else if (msg.includes('network') || msg.includes('fetch')) {
+                alert('Cloud Connection Issue!\n\nUnable to reach the Spoko Academy Cloud Service.\n\nPlease check your internet connection or wait a few moments if the server is waking up.');
+                throw e;
+            }
             throw e;
         }
     };
@@ -279,45 +106,11 @@ export const AuthProvider = ({ children }) => {
             throw new Error(policyCheck.message);
         }
 
-        const hashed = hashPassword(newPassword);
-        const updatePayload = {
-            password: hashed,
-            firstLoginPasswordChange: false,
-            passwordChangedAt: new Date().toISOString()
-        };
-
-        // Also update nested details if present
-        if (user.details) {
-            updatePayload.details = {
-                ...user.details,
-                firstLoginPasswordChange: false,
-                passwordChangedAt: new Date().toISOString()
-            };
-        }
-
-        await api.updateUser(user.id, updatePayload);
-
-        // Audit Log
-        await api.createAuditLog({
-            eventType: 'FIRST_LOGIN_PASSWORD_CHANGE',
-            userId: user.id,
-            userName: user.name,
-            role: user.role,
-            details: `Student completed mandatory initial password change on first login.`
-        });
-
-        await api.createSecurityLog({
-            userId: user.id,
-            eventType: 'PASSWORD_CHANGED',
-            status: 'SUCCESS',
-            details: 'First-login password change completed successfully',
-            userAgent: navigator.userAgent
-        });
+        await api.changePassword(newPassword);
 
         // Update local session
         const updatedUser = {
             ...user,
-            password: hashed,
             firstLoginPasswordChange: false
         };
         setUser(updatedUser);
@@ -327,7 +120,7 @@ export const AuthProvider = ({ children }) => {
 
     /**
      * ADMIN Password Reset for a Student
-     * Generates or assigns a temporary password, hashes it, and re-enforces first-login password change.
+     * Generates or assigns a temporary password, hashes it on server, and re-enforces first-login password change.
      */
     const adminResetPassword = async (studentId, customTempPassword = null) => {
         const tempPassword = customTempPassword || generateTemporaryPassword();
@@ -336,41 +129,7 @@ export const AuthProvider = ({ children }) => {
             throw new Error(policyCheck.message);
         }
 
-        const hashed = hashPassword(tempPassword);
-        const updatePayload = {
-            password: hashed,
-            firstLoginPasswordChange: true,
-            passwordResetAt: new Date().toISOString()
-        };
-
-        const targetUser = await api.getUserById(studentId);
-        if (targetUser?.details) {
-            updatePayload.details = {
-                ...targetUser.details,
-                firstLoginPasswordChange: true,
-                passwordResetAt: new Date().toISOString()
-            };
-        }
-
-        await api.updateUser(studentId, updatePayload);
-
-        // Audit Log
-        await api.createAuditLog({
-            eventType: 'ADMIN_PASSWORD_RESET',
-            performedBy: user?.name || 'Administrator',
-            userId: studentId,
-            studentName: targetUser?.name || studentId,
-            details: `Admin reset password and re-enabled first-login password-change requirement.`
-        });
-
-        await api.createSecurityLog({
-            userId: studentId,
-            eventType: 'ADMIN_PASSWORD_RESET',
-            status: 'SUCCESS',
-            details: `Password reset by Admin (${user?.name || 'admin'}). First login change required.`,
-            userAgent: navigator.userAgent
-        });
-
+        await api.adminResetPassword(studentId, tempPassword, true);
         return tempPassword;
     };
 

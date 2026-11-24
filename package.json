@@ -16,6 +16,7 @@
     "package:win": "electron-packager . \"Spoko Academy Portal\" --platform=win32 --arch=x64 --out=dist-electron --overwrite --ignore=\"(node_modules|src|android|backend|scripts|\\.git|dist-electron)\"",
     "build:win": "vite build && npm run package:win",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "test": "node --test tests/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

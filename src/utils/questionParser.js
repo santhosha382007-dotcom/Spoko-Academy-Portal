@@ -84,9 +84,10 @@ export const parseQuestionsFromText = (rawText) => {
 
         // 2. Check Question Start
         const qMatch = line.match(qStartRegex);
-        const isLikelyOption = (currentQ && currentQ.options.length > 0 && /^[1-4][\.\)]/.test(line));
+        const hasFinishedOptions = currentQ && (currentQ.hasAutoAnswer || currentQ.options.length >= 4);
+        const isLikelyOption = currentQ && !hasFinishedOptions && currentQ.options.length > 0 && currentQ.usesNumericOptions && /^[1-4][\.\)\:\-]/.test(line);
 
-        if (qMatch && !isLikelyOption) {
+        if (qMatch && (!isLikelyOption || hasFinishedOptions)) {
             if (currentQ) {
                 const fin = finalizeCurrent(currentQ);
                 if (fin) questions.push(fin);
@@ -95,7 +96,8 @@ export const parseQuestionsFromText = (rawText) => {
                 text: qMatch[1] || '',
                 options: [],
                 correctAnswer: 0,
-                hasAutoAnswer: false
+                hasAutoAnswer: false,
+                usesNumericOptions: false
             };
             continue;
         }
@@ -126,7 +128,11 @@ export const parseQuestionsFromText = (rawText) => {
 
         // 4. Check Single Option Start on this line
         const optMatch = line.match(optStartRegex);
-        if (optMatch && currentQ) {
+        if (optMatch && currentQ && !currentQ.hasAutoAnswer && currentQ.options.length < 4) {
+            const optIndicator = (optMatch[1] || optMatch[2] || '').trim();
+            if (/^[1-4]$/.test(optIndicator)) {
+                currentQ.usesNumericOptions = true;
+            }
             const optText = optMatch[3] || '';
             currentQ.options.push(optText);
             continue;

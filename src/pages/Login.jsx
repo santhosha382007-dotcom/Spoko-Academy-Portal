@@ -47,25 +47,13 @@ const Login = () => {
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     try {
-      const usersDb = await api.getUsers();
-      const targetUser = usersDb.find(u => u.phone === resetPhone || u.id === resetPhone);
-
-      if (targetUser) {
-        await api.createAuditLog({
-          eventType: 'PASSWORD_RESET_REQUESTED',
-          userId: targetUser.id,
-          userName: targetUser.name,
-          details: `Student ${targetUser.name} requested password reset from Administrator.`
-        });
-        alert(`Password reset request sent to the Administrator. The Administrator will reset your credentials with a temporary password.`);
-        setShowForgotPass(false);
-        setResetPhone('');
-      } else {
-        alert('No registered account found with this Phone Number or Student ID.');
-      }
+      await api.forgotPassword(resetPhone);
+      alert('Password reset request submitted. If an account matches, the Academy Administrator will reset your credentials with a temporary password.');
+      setShowForgotPass(false);
+      setResetPhone('');
     } catch (e) {
       console.error(e);
-      alert('Server connection failed.');
+      alert('Server connection failed. Please check your internet connection.');
     }
   };
 

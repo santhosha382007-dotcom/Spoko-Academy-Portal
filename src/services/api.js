@@ -11,19 +11,26 @@ const fetchWithTimeout = async (resource, options = {}, retries = 1) => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
-    // Security Token to prevent unauthorized network access
-    const SECURITY_TOKEN = 'spoko_academy_private_access_token_8899';
+    // Dynamic JWT / Session Token
+    const token = typeof window !== 'undefined' ? localStorage.getItem('spoko_token') : null;
+    const headers = {
+        ...restOptions.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
 
     try {
         const response = await fetch(resource, {
             ...restOptions,
-            headers: {
-                ...restOptions.headers,
-                'X-Spoko-Auth': SECURITY_TOKEN
-            },
+            headers,
             signal: controller.signal
         });
         clearTimeout(id);
+        if (response.status === 401 && typeof window !== 'undefined' && !resource.includes('/api/auth/login')) {
+            localStorage.removeItem('spoko_token');
+            localStorage.removeItem('spoko_user');
+        }
         return response;
     } catch (err) {
         clearTimeout(id);
@@ -36,6 +43,62 @@ const fetchWithTimeout = async (resource, options = {}, retries = 1) => {
 }
 
 export const api = {
+    // Authentication & Session
+    login: async (identifier, password) => {
+        const res = await fetchWithTimeout(`${getBaseUrl()}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.message || data.error || 'Authentication failed');
+        }
+        return data;
+    },
+    getMe: async () => {
+        const res = await fetchWithTimeout(`${getBaseUrl()}/api/auth/me`);
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        return await res.json();
+    },
+    changePassword: async (newPassword) => {
+        const res = await fetchWithTimeout(`${getBaseUrl()}/api/auth/change-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Password update failed');
+        return data;
+    },
+    adminResetPassword: async (targetUserId, newPassword, enforceFirstChange = true) => {
+        const res = await fetchWithTimeout(`${getBaseUrl()}/api/auth/admin-reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetUserId, newPassword, enforceFirstChange })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Password reset failed');
+        return data;
+    },
+    forgotPassword: async (phoneOrId) => {
+        const res = await fetchWithTimeout(`${getBaseUrl()}/api/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phoneOrId })
+        });
+        return await res.json();
+    },
+    askAI: async (messages) => {
+        const res = await fetchWithTimeout(`${getBaseUrl()}/api/ai/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'AI service unavailable');
+        return data.reply;
+    },
     // Users
     getUsers: async () => {
         try {
@@ -222,18 +285,10 @@ export const api = {
     },
     getResultsByUserId: async (userId) => {
         try {
-            const res = await fetchWithTimeout(`${getBaseUrl()}/results?userId=${userId}`);
+            const res = await fetchWithTimeout(`${getBaseUrl()}/results?userId=${encodeURIComponent(userId)}`);
             if (res.ok) {
                 const data = await res.json();
-                if (Array.isArray(data) && data.length > 0) return data;
-            }
-            // Resilient fallback: fetch all results and filter by string-normalized userId or studentId
-            const allRes = await fetchWithTimeout(`${getBaseUrl()}/results`);
-            if (allRes.ok) {
-                const allData = await allRes.json();
-                if (Array.isArray(allData)) {
-                    return allData.filter(r => String(r.userId) === String(userId) || String(r.studentId) === String(userId));
-                }
+                if (Array.isArray(data)) return data;
             }
             return [];
         } catch (e) {

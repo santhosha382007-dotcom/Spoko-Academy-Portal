@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ProfileSettings from './pages/student/ProfileSettings';
 import Schedule from './pages/Schedule';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Admin Pages
 import UsersList from './pages/admin/UsersList';
@@ -164,7 +165,7 @@ function App() {
                 } />
                 <Route path="/admin/activity" element={
                     <ProtectedRoute allowedRoles={['admin']}>
-                        <AuditLogs />
+                        <Activity />
                     </ProtectedRoute>
                 } />
 
@@ -242,6 +243,7 @@ function App() {
                         <Schedule />
                     </ProtectedRoute>
                 } />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

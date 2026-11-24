@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const dir = __dirname;
+const dir = path.join(__dirname, '..');
 const files = ['db.json', 'db-1773154307020.json'];
 
 files.forEach(file => {
