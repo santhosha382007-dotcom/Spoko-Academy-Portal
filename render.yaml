@@ -3,7 +3,7 @@ services:
     name: spoko-portal-api
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && node -e "const fs=require('fs'); ['db.json', 'backend/db.json'].forEach(p => { try { if (!fs.existsSync(p) || JSON.parse(fs.readFileSync(p, 'utf8')||'{}').users?.length === 0) fs.copyFileSync('db.seed.json', p); } catch(e){} });"
     startCommand: npm start
     healthCheckPath: /health
     envVars:

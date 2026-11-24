@@ -1,9 +1,6 @@
 const jsonServer = require('json-server');
 const path = require('path');
 const fs = require('fs');
-const securityMiddleware = require('./security-middleware.cjs');
-
-const server = jsonServer.create();
 
 // Automatically locate db.json (inside backend folder or root workspace)
 const dbPath = process.env.DB_PATH 
@@ -43,6 +40,10 @@ function ensureDatabaseSeed() {
         if (foundSeed) {
             try {
                 fs.copyFileSync(foundSeed, dbPath);
+                const backendDb = path.join(__dirname, 'db.json');
+                if (!fs.existsSync(backendDb)) {
+                    fs.copyFileSync(foundSeed, backendDb);
+                }
                 console.log(`[SEED] Initialized ${dbPath} from ${foundSeed}`);
             } catch (err) {
                 console.error('[SEED ERROR]', err);
@@ -52,6 +53,9 @@ function ensureDatabaseSeed() {
 }
 ensureDatabaseSeed();
 
+const securityMiddleware = require('./security-middleware.cjs');
+
+const server = jsonServer.create();
 const router = jsonServer.router(dbPath);
 const middlewares = jsonServer.defaults({
     noCors: true // Handled by our custom hardened CORS middleware below
