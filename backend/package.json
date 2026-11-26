@@ -4,6 +4,7 @@
   "description": "Spoko Academy Portal REST API and Database Server",
   "main": "server.js",
   "scripts": {
+    "prestart": "node -e \"const fs=require('fs'); if (!fs.existsSync('db.json') || (JSON.parse(fs.readFileSync('db.json', 'utf8')||'{}').users?.length||0)===0) try { fs.copyFileSync('db.seed.json', 'db.json'); } catch(e){}\"",
     "start": "node server.js",
     "dev": "node server.js"
   },
