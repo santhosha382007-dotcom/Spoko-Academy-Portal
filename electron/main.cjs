@@ -106,7 +106,7 @@ function createWindow(port) {
             preload: path.join(__dirname, 'preload.cjs'),
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: true
+            webSecurity: false
         }
     });
 

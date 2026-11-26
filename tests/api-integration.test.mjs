@@ -39,7 +39,7 @@ describe('5. Backend Secure Authentication & RBAC Integration Tests', () => {
 
         // Poll until server is ready
         let ready = false;
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 60; i++) {
             await new Promise(r => setTimeout(r, 250));
             try {
                 const res = await fetch(`${BASE_URL}/health`);

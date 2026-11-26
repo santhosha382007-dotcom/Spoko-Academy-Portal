@@ -36,8 +36,10 @@ const Login = () => {
         setErrorMessage('Account is restricted or disabled. Please contact the administrator.');
       } else if (err === 'UnauthorizedDevice') {
         setErrorMessage('Security Violation: Unauthorized device. Access rejected.');
+      } else if (err === 'NetworkError' || String(err?.message || err).toLowerCase().includes('fetch') || String(err?.message || err).toLowerCase().includes('network') || String(err?.message || err).toLowerCase().includes('abort')) {
+        setErrorMessage('Cloud Connection Issue: Unable to reach the Spoko Academy Cloud Service. The cloud server may be waking up from sleep mode. Please wait a few moments and try signing in again.');
       } else {
-        setErrorMessage('Authentication error. Please verify your connection.');
+        setErrorMessage(typeof err === 'string' ? err : 'Authentication error. Please verify your connection.');
       }
     } finally {
       setIsLoading(false);

@@ -2,11 +2,102 @@ const jsonServer = require('json-server');
 const path = require('path');
 const fs = require('fs');
 
-// Automatically locate db.json (inside backend folder or root workspace)
-const dbPath = process.env.DB_PATH 
-    || (fs.existsSync(path.join(__dirname, 'db.json')) 
-        ? path.join(__dirname, 'db.json') 
-        : path.join(__dirname, '..', 'db.json'));
+// Canonical database location: always backend/db.json
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'db.json');
+
+// Built-in default seed object (fallback if no seed file exists on disk)
+const defaultSeedData = {
+    users: [
+        {
+            id: "admin",
+            name: "Spoko",
+            phone: "Spoko",
+            password: "$2b$10$KuYyWmSSsgVv2zni3wqj2uOWbw3vnpeDoyjDCSrygX3ltOk2HmJ06",
+            role: "admin",
+            status: "active",
+            firstLoginPasswordChange: false,
+            avatar: "https://ui-avatars.com/api/?name=Spoko&background=6366f1&color=fff",
+            details: {}
+        },
+        {
+            id: "staff",
+            name: "Staff Faculty",
+            phone: "staff",
+            email: "staff@spoko.edu",
+            role: "staff",
+            department: "Railway",
+            status: "active",
+            password: "$2b$10$rnkkZbjQLhDVF3Ks3EuJ0evy6d8HIZAUqY7PLD7X7/NMuyIemqORu",
+            avatar: "https://ui-avatars.com/api/?name=Staff+Faculty&background=7c3aed&color=fff",
+            details: { department: "Railway", title: "Department Faculty / Staff" }
+        },
+        {
+            id: "12234",
+            name: "Santhosh",
+            phone: "8903366719",
+            department: "Railway",
+            password: "$2b$10$KuYyWmSSsgVv2zni3wqj2uOWbw3vnpeDoyjDCSrygX3ltOk2HmJ06",
+            role: "student",
+            status: "active",
+            firstLoginPasswordChange: false,
+            avatar: "https://ui-avatars.com/api/?name=Santhosh&background=random",
+            details: {
+                studentId: "12234",
+                fullName: "Santhosh",
+                phone: "8903366719",
+                email: "student@example.com",
+                department: "Railway",
+                batch: "2026-A"
+            }
+        }
+    ],
+    exams: [
+        {
+            id: 1775374021135,
+            title: "Sample Assessment",
+            duration: 60,
+            department: "Generic",
+            category: "Mock Test",
+            questions: [
+                {
+                    text: "What is the primary function of an educational assessment portal?",
+                    options: ["Entertainment", "Competency Evaluation", "Social Media", "Gaming"],
+                    correctAnswer: 1,
+                    type: "MCQ",
+                    subject: "General",
+                    id: 1775374013459
+                }
+            ],
+            status: "Active",
+            max_attempts: 3,
+            max_security_violations: 3,
+            description: "General competency assessment.",
+            createdAt: new Date().toISOString()
+        }
+    ],
+    questions: [],
+    results: [],
+    attendance: [],
+    schedules: [],
+    requests: [],
+    announcements: [],
+    sessions: [],
+    security_logs: [],
+    assessment_attempts: [],
+    attendance_records: [],
+    location_settings: [],
+    departments: [
+        { id: "dept-railway", name: "Railway", code: "RLY", active: true },
+        { id: "dept-ssc", name: "SSC", code: "SSC", active: true },
+        { id: "dept-gd", name: "GD", code: "GD", active: true },
+        { id: "dept-4", name: "TNPSC", code: "TNPSC", active: true },
+        { id: "dept-5", name: "TNUSRB", code: "TNUSRB", active: true }
+    ],
+    leave_requests: [],
+    leave_balances: [],
+    audit_logs: [],
+    question_import_batches: []
+};
 
 // Auto-seed database if db.json is missing or has zero users (e.g. fresh Render cloud deployment)
 function ensureDatabaseSeed() {
@@ -37,17 +128,19 @@ function ensureDatabaseSeed() {
             path.join(__dirname, '..', 'db.example.json')
         ];
         const foundSeed = seedCandidates.find(p => fs.existsSync(p));
-        if (foundSeed) {
-            try {
+        try {
+            if (foundSeed) {
                 fs.copyFileSync(foundSeed, dbPath);
-                const backendDb = path.join(__dirname, 'db.json');
-                if (!fs.existsSync(backendDb)) {
-                    fs.copyFileSync(foundSeed, backendDb);
-                }
                 console.log(`[SEED] Initialized ${dbPath} from ${foundSeed}`);
-            } catch (err) {
-                console.error('[SEED ERROR]', err);
+            } else {
+                fs.writeFileSync(dbPath, JSON.stringify(defaultSeedData, null, 2), 'utf8');
+                console.log(`[SEED] Initialized ${dbPath} from built-in seed template`);
             }
+            // Mirror to root db.json if running in project root
+            const rootDb = path.join(__dirname, '..', 'db.json');
+            try { fs.copyFileSync(dbPath, rootDb); } catch (_) {}
+        } catch (err) {
+            console.error('[SEED ERROR]', err);
         }
     }
 }
@@ -74,7 +167,9 @@ const ALLOWED_ORIGINS = [
     'https://spoko-academy-portal-2.onrender.com',
     'capacitor://localhost',
     'http://localhost',
-    'ionic://localhost'
+    'ionic://localhost',
+    'null',
+    'file://'
 ];
 
 // Hardened CORS Middleware
@@ -87,8 +182,12 @@ server.use((req, res, next) => {
     } else {
         const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
             origin.endsWith('.onrender.com') ||
-            origin.startsWith('http://localhost:') ||
-            origin.startsWith('http://127.0.0.1:');
+            origin.startsWith('http://localhost') ||
+            origin.startsWith('http://127.0.0.1') ||
+            origin.startsWith('capacitor://') ||
+            origin.startsWith('ionic://') ||
+            origin === 'null' ||
+            origin === 'file://';
 
         if (isAllowed) {
             res.header('Access-Control-Allow-Origin', origin);

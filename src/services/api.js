@@ -6,8 +6,8 @@ const getBaseUrl = () => {
     return CLOUD_API_URL;
 };
 
-const fetchWithTimeout = async (resource, options = {}, retries = 1) => {
-    const { timeout = 45000, ...restOptions } = options;
+const fetchWithTimeout = async (resource, options = {}, retries = 2) => {
+    const { timeout = 90000, ...restOptions } = options;
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
@@ -34,13 +34,14 @@ const fetchWithTimeout = async (resource, options = {}, retries = 1) => {
         return response;
     } catch (err) {
         clearTimeout(id);
-        if (retries > 0 && (err.name === 'AbortError' || err.message?.includes('fetch') || err.message?.includes('network'))) {
-            console.warn(`[API] Retrying fetch for ${resource} after cold start delay...`);
+        if (retries > 0 && (err.name === 'AbortError' || err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('Failed to fetch'))) {
+            console.warn(`[API] Retrying fetch for ${resource} after cold start delay (${retries} retries left)...`);
+            await new Promise(r => setTimeout(r, 2000));
             return fetchWithTimeout(resource, options, retries - 1);
         }
         throw err;
     }
-}
+};
 
 export const api = {
     // Authentication & Session

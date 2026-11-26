@@ -3,7 +3,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwtUtils = require('./jwt-utils.cjs');
 
-const dbPath = process.env.DB_PATH || (fs.existsSync(path.join(__dirname, 'db.json')) ? path.join(__dirname, 'db.json') : path.join(__dirname, '..', 'db.json'));
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'db.json');
 
 // Helpers to read and safely write db.json
 const getDb = () => {

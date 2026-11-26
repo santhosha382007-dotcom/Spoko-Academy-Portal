@@ -87,9 +87,8 @@ export const AuthProvider = ({ children }) => {
                 throw 'Blocked';
             } else if (msg.includes('invalid') || msg.includes('not found') || msg.includes('incorrect') || msg.includes('password')) {
                 throw 'Invalid';
-            } else if (msg.includes('network') || msg.includes('fetch')) {
-                alert('Cloud Connection Issue!\n\nUnable to reach the Spoko Academy Cloud Service.\n\nPlease check your internet connection or wait a few moments if the server is waking up.');
-                throw e;
+            } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('abort') || msg.includes('timeout')) {
+                throw 'NetworkError';
             }
             throw e;
         }
